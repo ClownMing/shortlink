@@ -2,8 +2,10 @@ package com.ming.shortlink.admin.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ming.shortlink.admin.dao.entity.UserDO;
+import com.ming.shortlink.admin.dto.req.UserLoginReqDTO;
 import com.ming.shortlink.admin.dto.req.UserRegisterReqDTO;
 import com.ming.shortlink.admin.dto.req.UserUpdateReqDTO;
+import com.ming.shortlink.admin.dto.resp.UserLoginRespDTO;
 import com.ming.shortlink.admin.dto.resp.UserRespDTO;
 
 /**
@@ -38,4 +40,16 @@ public interface UserService extends IService<UserDO> {
      * 根据用户名修改用户
      */
     void update(UserUpdateReqDTO requestParam);
+
+    /**
+     * 用户登录
+     */
+    UserLoginRespDTO login(UserLoginReqDTO requestParam);
+
+    /**
+     * 通过token，检验用户是否登录
+     * @param username 用户名
+     * @param token 用户Token
+     */
+    Boolean checkLogin(String username, String token);
 }

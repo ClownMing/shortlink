@@ -2,8 +2,10 @@ package com.ming.shortlink.admin.controller;
 
 import com.ming.shortlink.admin.common.convention.result.Result;
 import com.ming.shortlink.admin.common.convention.result.Results;
+import com.ming.shortlink.admin.dto.req.UserLoginReqDTO;
 import com.ming.shortlink.admin.dto.req.UserRegisterReqDTO;
 import com.ming.shortlink.admin.dto.req.UserUpdateReqDTO;
+import com.ming.shortlink.admin.dto.resp.UserLoginRespDTO;
 import com.ming.shortlink.admin.dto.resp.UserRespDTO;
 import com.ming.shortlink.admin.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +54,24 @@ public class UserController {
     public Result<Void> update(@RequestBody UserUpdateReqDTO requestParam) {
         userService.update(requestParam);
         return Results.success();
+    }
+
+    /**
+     * 用户登录
+     */
+    @PostMapping("/api/short-link/v1/user/login")
+    public Result<UserLoginRespDTO> login(@RequestBody UserLoginReqDTO requestParam) {
+        UserLoginRespDTO result = userService.login(requestParam);
+        return Results.success(result);
+    }
+
+    /**
+     * 验证用户是否登录
+     */
+    @GetMapping("/api/short-link/v1/user/check-login")
+    public Result<Boolean> checkLogin(@RequestParam("username") String username, @RequestParam("token") String token) {
+        Boolean result = userService.checkLogin(username, token);
+        return Results.success(result);
     }
 
 }

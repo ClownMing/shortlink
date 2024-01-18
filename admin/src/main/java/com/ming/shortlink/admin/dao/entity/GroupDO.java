@@ -1,17 +1,20 @@
 package com.ming.shortlink.admin.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Data;
-
-import java.util.Date;
+import com.ming.shortlink.admin.common.database.BaseDO;
+import lombok.*;
 
 /**
  * @author clownMing
  * 短链接分组实体
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 @TableName("t_group")
-public class GroupDO {
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class GroupDO extends BaseDO {
     /**
      * id
      */
@@ -37,18 +40,4 @@ public class GroupDO {
      */
     private Integer sortOrder;
 
-    /**
-     * 创建时间
-     */
-    private Date createTime;
-
-    /**
-     * 修改时间
-     */
-    private Date updateTime;
-
-    /**
-     * 删除标识 0：未删除 1：已删除
-     */
-    private int delFlag;
 }

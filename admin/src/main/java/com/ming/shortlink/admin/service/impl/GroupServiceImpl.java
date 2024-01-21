@@ -8,7 +8,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ming.shortlink.admin.common.biz.user.UserContext;
 import com.ming.shortlink.admin.dao.entity.GroupDO;
 import com.ming.shortlink.admin.dao.mapper.GroupMapper;
-import com.ming.shortlink.admin.dto.req.ShortLinkGroupUpdateDTO;
+import com.ming.shortlink.admin.dto.req.ShortLinkGroupUpdateReqDTO;
 import com.ming.shortlink.admin.dto.resp.ShortLinkGroupRespDTO;
 import com.ming.shortlink.admin.service.GroupService;
 import com.ming.shortlink.admin.toolkit.RandomGenerator;
@@ -55,7 +55,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
 
 
     @Override
-    public void updateGroup(ShortLinkGroupUpdateDTO requestParam) {
+    public void updateGroup(ShortLinkGroupUpdateReqDTO requestParam) {
         LambdaUpdateWrapper<GroupDO> updateWrapper = Wrappers.lambdaUpdate(GroupDO.class)
                 .eq(GroupDO::getUsername, UserContext.getUsername())
                 .eq(GroupDO::getGid, requestParam.getGid())

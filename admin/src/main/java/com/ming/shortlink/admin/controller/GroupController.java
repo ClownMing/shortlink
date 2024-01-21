@@ -2,8 +2,8 @@ package com.ming.shortlink.admin.controller;
 
 import com.ming.shortlink.admin.common.convention.result.Result;
 import com.ming.shortlink.admin.common.convention.result.Results;
-import com.ming.shortlink.admin.dto.req.ShortLinkGroupSaveDTO;
-import com.ming.shortlink.admin.dto.req.ShortLinkGroupUpdateDTO;
+import com.ming.shortlink.admin.dto.req.ShortLinkGroupSaveReqDTO;
+import com.ming.shortlink.admin.dto.req.ShortLinkGroupUpdateReqDTO;
 import com.ming.shortlink.admin.dto.resp.ShortLinkGroupRespDTO;
 import com.ming.shortlink.admin.service.GroupService;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ public class GroupController {
      * 新增短链接分组
      */
     @PostMapping("/api/short-link/v1/group")
-    public Result<Void> save(@RequestBody ShortLinkGroupSaveDTO requestParam) {
+    public Result<Void> save(@RequestBody ShortLinkGroupSaveReqDTO requestParam) {
         groupService.saveGroup(requestParam.getName());
         return Results.success();
     }
@@ -43,7 +43,7 @@ public class GroupController {
      * 修改短链接分组名称
      */
     @PutMapping("/api/short-link/v1/group")
-    public Result<Void> updateGroup(@RequestBody ShortLinkGroupUpdateDTO requestParam) {
+    public Result<Void> updateGroup(@RequestBody ShortLinkGroupUpdateReqDTO requestParam) {
         groupService.updateGroup(requestParam);
         return Results.success();
     }

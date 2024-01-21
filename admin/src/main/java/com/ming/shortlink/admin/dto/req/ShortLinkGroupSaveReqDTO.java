@@ -4,16 +4,10 @@ import lombok.Data;
 
 /**
  * @author clownMing
- * 短链接分组修改参数
+ * 短链接分组创建参数
  */
 @Data
-public class ShortLinkGroupUpdateDTO {
-
-    /**
-     * 分组标识
-     */
-    private String gid;
-
+public class ShortLinkGroupSaveReqDTO {
 
     /**
      * 分组名

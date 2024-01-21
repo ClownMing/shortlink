@@ -3,6 +3,7 @@ package com.ming.shortlink.admin.controller;
 import com.ming.shortlink.admin.common.convention.result.Result;
 import com.ming.shortlink.admin.common.convention.result.Results;
 import com.ming.shortlink.admin.dto.req.ShortLinkGroupSaveReqDTO;
+import com.ming.shortlink.admin.dto.req.ShortLinkGroupSortReqDTO;
 import com.ming.shortlink.admin.dto.req.ShortLinkGroupUpdateReqDTO;
 import com.ming.shortlink.admin.dto.resp.ShortLinkGroupRespDTO;
 import com.ming.shortlink.admin.service.GroupService;
@@ -54,6 +55,12 @@ public class GroupController {
     @DeleteMapping("/api/short-link/v1/group")
     public Result<Void> deleteGroup(@RequestParam String gid) {
         groupService.deleteGroup(gid);
+        return Results.success();
+    }
+
+    @PostMapping("/api/short-link/v1/group/sort")
+    public Result<Void> sortGroup(@RequestBody List<ShortLinkGroupSortReqDTO> requestParam) {
+        groupService.sortGroup(requestParam);
         return Results.success();
     }
 }

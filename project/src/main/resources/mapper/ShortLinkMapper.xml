@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ming.shortlink.project.dao.mapper.ShortLinkMapper">
+
+    <select id="listGroupShortLinkCount" resultType="com.ming.shortlink.project.dto.resp.ShortLinkGroupCountQueryRespDTO">
+        select `gid`, count(*) as 'shortLinkCount'
+        from
+        t_link
+        where
+        `enable_status` = 0
+        and
+        `gid` in
+        <foreach collection="gids" item="gid" open="(" separator="," close=")">
+            #{gid}
+        </foreach>
+        group by `gid`
+    </select>
+</mapper>

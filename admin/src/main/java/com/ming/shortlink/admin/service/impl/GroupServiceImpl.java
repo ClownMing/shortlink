@@ -32,17 +32,22 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
 
     @Override
     public void saveGroup(String groupName) {
+        saveGroup(UserContext.getUsername(), groupName);
+    }
+
+    @Override
+    public void saveGroup(String username, String groupName) {
         String gid;
         while (true) {
             gid = RandomGenerator.generateRandom();
-            if (!hasGid(gid)) {
+            if (!hasGid(username, gid)) {
                 break;
             }
         }
         GroupDO groupDO = GroupDO.builder()
                 .gid(gid)
                 .sortOrder(0)
-                .username(UserContext.getUsername())
+                .username(username)
                 .name(groupName)
                 .build();
         baseMapper.insert(groupDO);
@@ -56,7 +61,8 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
                 .eq(GroupDO::getUsername, UserContext.getUsername())
                 .orderByDesc(GroupDO::getSortOrder, GroupDO::getUpdateTime);
         List<GroupDO> groupDOList = baseMapper.selectList(lambdaQueryWrapper);
-        ShortLinkRemoteService shortLinkRemoteService = new ShortLinkRemoteService(){};
+        ShortLinkRemoteService shortLinkRemoteService = new ShortLinkRemoteService() {
+        };
         Result<List<ShortLinkGroupCountQueryRespDTO>> listResult = shortLinkRemoteService.listGroupShortLinkCount(groupDOList.stream().map(GroupDO::getGid).toList());
         List<ShortLinkGroupRespDTO> shortLinkGroupRespDTOList = groupDOList.parallelStream().map(groupDO -> BeanUtil.copyProperties(groupDO, ShortLinkGroupRespDTO.class)).collect(Collectors.toList());
         shortLinkGroupRespDTOList.forEach(each -> {
@@ -105,11 +111,11 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
     }
 
 
-    private boolean hasGid(String gid) {
+    private boolean hasGid(String username, String gid) {
         LambdaQueryWrapper<GroupDO> lambdaQueryWrapper = Wrappers.lambdaQuery(GroupDO.class)
                 .eq(GroupDO::getGid, gid)
                 // todo 设置用户名
-                .eq(GroupDO::getUsername, UserContext.getUsername());
+                .eq(GroupDO::getUsername, Optional.ofNullable(username).orElse(UserContext.getUsername()));
         GroupDO hasGroupFlag = baseMapper.selectOne(lambdaQueryWrapper);
         return hasGroupFlag != null;
     }

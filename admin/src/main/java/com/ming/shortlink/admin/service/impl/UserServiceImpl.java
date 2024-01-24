@@ -21,6 +21,7 @@ import org.redisson.api.RBloomFilter;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -28,8 +29,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static com.ming.shortlink.admin.common.constant.RedisCacheConstant.LOCK_USER_REGISTER_KEY;
-import static com.ming.shortlink.admin.common.enums.UserErrorCodeEnum.USER_NAME_EXIST;
-import static com.ming.shortlink.admin.common.enums.UserErrorCodeEnum.USER_SAVE_ERROR;
+import static com.ming.shortlink.admin.common.enums.UserErrorCodeEnum.*;
 
 /**
  * @author clownMing
@@ -71,12 +71,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
         RLock lock = redissonClient.getLock(LOCK_USER_REGISTER_KEY + requestParam.getUsername());
         try {
             if (lock.tryLock()) {
-                int inserted = baseMapper.insert(BeanUtil.toBean(requestParam, UserDO.class));
-                if (inserted < 1) {
-                    throw new ClientException(USER_SAVE_ERROR);
+                try {
+                    int inserted = baseMapper.insert(BeanUtil.toBean(requestParam, UserDO.class));
+                    if (inserted < 1) {
+                        throw new ClientException(USER_SAVE_ERROR);
+                    }
+                } catch (DuplicateKeyException ex) {
+                    throw new ClientException(USER_EXIST);
                 }
                 userRegisterCachePenetrationBloomFilter.add(requestParam.getUsername());
-                return ;
+                return;
             }
             throw new ClientException(USER_NAME_EXIST);
         } finally {
@@ -101,11 +105,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
                 .eq(requestParam.getPassword() != null, UserDO::getPassword, requestParam.getPassword())
                 .eq(UserDO::getDelFlag, 0);
         UserDO dbUser = baseMapper.selectOne(lambdaQueryWrapper);
-        if(dbUser == null) {
+        if (dbUser == null) {
             throw new ClientException("用户不存在");
         }
         Boolean hasLoginKey = stringRedisTemplate.hasKey("login_" + requestParam.getUsername());
-        if(hasLoginKey != null && hasLoginKey) {
+        if (hasLoginKey != null && hasLoginKey) {
             throw new ClientException("用户已登录");
         }
         String uuid = UUID.randomUUID().toString();
@@ -123,7 +127,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     public void logout(String username, String token) {
         if (checkLogin(username, token)) {
             stringRedisTemplate.delete("login_" + username);
-            return ;
+            return;
         }
         throw new ClientException("用户Token不存在或用户未登录");
     }

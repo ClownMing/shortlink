@@ -10,6 +10,8 @@ import com.ming.shortlink.project.common.convention.exception.ClientException;
 import com.ming.shortlink.project.common.convention.exception.ServiceException;
 import com.ming.shortlink.project.common.enums.ValidDateTypeEnum;
 import com.ming.shortlink.project.dao.entity.ShortLinkDO;
+import com.ming.shortlink.project.dao.entity.ShortLinkGotoDO;
+import com.ming.shortlink.project.dao.mapper.ShortLinkGotoMapper;
 import com.ming.shortlink.project.dao.mapper.ShortLinkMapper;
 import com.ming.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.ming.shortlink.project.dto.req.ShortLinkPageReqDTO;
@@ -19,6 +21,8 @@ import com.ming.shortlink.project.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.ming.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.ming.shortlink.project.service.ShortLinkService;
 import com.ming.shortlink.project.toolkit.HashUtil;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RBloomFilter;
 import org.slf4j.Logger;
@@ -27,6 +31,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 
@@ -44,6 +49,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     private final ShortLinkMapper shortLinkMapper;
 
+    private final ShortLinkGotoMapper shortLinkGotoMapper;
+
+    @Transactional
     @Override
     public ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO requestParam) {
         String shortLinkSuffix = generateSuffix(requestParam);
@@ -52,8 +60,13 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         shortLinkDO.setShortUri(shortLinkSuffix);
         shortLinkDO.setEnableStatus(0);
         shortLinkDO.setFullShortUrl(fullShortUrl);
+        ShortLinkGotoDO linkGotoDO = ShortLinkGotoDO.builder()
+                .gid(requestParam.getGid())
+                .fullShortUrl(fullShortUrl)
+                .build();
         try {
             baseMapper.insert(shortLinkDO);
+            shortLinkGotoMapper.insert(linkGotoDO);
         } catch (DuplicateKeyException e) {
             LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
                     .eq(ShortLinkDO::getFullShortUrl, fullShortUrl);
@@ -65,7 +78,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         }
         shortUriCreateCachePenetrationBloomFilter.add(fullShortUrl);
         return ShortLinkCreateRespDTO.builder()
-                .fullShortUrl(shortLinkDO.getFullShortUrl())
+                .fullShortUrl("http://" + shortLinkDO.getFullShortUrl())
                 .originUrl(requestParam.getOriginUrl())
                 .gid(requestParam.getGid())
                 .build();
@@ -139,6 +152,32 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             baseMapper.insert(shortLinkDO);
         }
         return null;
+    }
+
+    @Override
+    public void restoreUrl(String shortUri, HttpServletRequest request, HttpServletResponse response) {
+        String serverName = request.getServerName();
+        String fullShortUrl = serverName + "/" + shortUri;
+        LambdaQueryWrapper<ShortLinkGotoDO> linkGotoDOLambdaQueryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
+                .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
+        ShortLinkGotoDO linkGotoDO = shortLinkGotoMapper.selectOne(linkGotoDOLambdaQueryWrapper);
+        if(linkGotoDO == null) {
+            // 严谨来说此处需要进行封控
+            return ;
+        }
+        LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
+                .eq(ShortLinkDO::getGid, linkGotoDO.getGid())
+                .eq(ShortLinkDO::getFullShortUrl, fullShortUrl)
+                .eq(ShortLinkDO::getDelFlag, 0)
+                .eq(ShortLinkDO::getEnableStatus, 0);
+        ShortLinkDO shortLinkDO = baseMapper.selectOne(queryWrapper);
+        if(shortLinkDO != null) {
+            try {
+                response.sendRedirect(shortLinkDO.getOriginUrl());
+            } catch (IOException e) {
+                throw new ServiceException("重定向错误");
+            }
+        }
     }
 
     private String generateSuffix(ShortLinkCreateReqDTO requestParam) {

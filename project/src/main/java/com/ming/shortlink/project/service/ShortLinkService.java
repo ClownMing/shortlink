@@ -9,6 +9,8 @@ import com.ming.shortlink.project.dto.req.ShortLinkUpdateReqDTO;
 import com.ming.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
 import com.ming.shortlink.project.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.ming.shortlink.project.dto.resp.ShortLinkPageRespDTO;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.List;
 
@@ -39,4 +41,9 @@ public interface ShortLinkService extends IService<ShortLinkDO> {
      * 修改短链接
      */
     Void updateShortLink(ShortLinkUpdateReqDTO requestParam);
+
+    /**
+     * 短链接跳转
+     */
+    void restoreUrl(String shortUri, HttpServletRequest request, HttpServletResponse response);
 }

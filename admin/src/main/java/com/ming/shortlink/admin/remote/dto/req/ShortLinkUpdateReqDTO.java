@@ -1,4 +1,4 @@
-package com.ming.shortlink.project.dto.req;
+package com.ming.shortlink.admin.remote.dto.req;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;

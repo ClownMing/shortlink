@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ming.shortlink.project.common.convention.exception.ClientException;
 import com.ming.shortlink.project.common.convention.exception.ServiceException;
+import com.ming.shortlink.project.common.enums.UserAgentEnum;
 import com.ming.shortlink.project.common.enums.ValidDateTypeEnum;
 import com.ming.shortlink.project.dao.entity.ShortLinkDO;
 import com.ming.shortlink.project.dao.entity.ShortLinkGotoDO;
@@ -26,6 +27,9 @@ import com.ming.shortlink.project.toolkit.LinkUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -73,6 +77,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         shortLinkDO.setShortUri(shortLinkSuffix);
         shortLinkDO.setEnableStatus(0);
         shortLinkDO.setFullShortUrl(fullShortUrl);
+        shortLinkDO.setFavicon(getFavicon(requestParam.getOriginUrl()));
         ShortLinkGotoDO linkGotoDO = ShortLinkGotoDO.builder()
                 .gid(requestParam.getGid())
                 .fullShortUrl(fullShortUrl)
@@ -288,6 +293,25 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         return shortUri;
     }
 
+
+    private static String getFavicon(String url) {
+        Document doc;
+        try {
+            doc = Jsoup.connect(url).
+                    userAgent(UserAgentEnum.EDGE_USER_AGENT.getAgent())
+                    .timeout(5 * 1000)
+                    .get();
+        } catch (IOException e) {
+            throw new ServiceException("获取网站图标出错");
+        }
+        Element link = doc.select("link[href~=.*\\.(ico|png)]").first();
+        try {
+            assert link != null;
+        }catch (Exception e) {
+            throw new ServiceException("获取网站图标出错");
+        }
+        return link.absUrl("href").isEmpty() ? null : link.absUrl("href");
+    }
 }
 
 

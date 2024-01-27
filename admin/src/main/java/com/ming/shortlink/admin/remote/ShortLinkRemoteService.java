@@ -12,7 +12,6 @@ import com.ming.shortlink.admin.remote.dto.req.ShortLinkUpdateReqDTO;
 import com.ming.shortlink.admin.remote.dto.resp.ShortLinkCreateRespDTO;
 import com.ming.shortlink.admin.remote.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.ming.shortlink.admin.remote.dto.resp.ShortLinkPageRespDTO;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.HashMap;
@@ -58,10 +57,18 @@ public interface ShortLinkRemoteService {
     /**
      * 修改短链接
      */
-    @PutMapping("/api/short-link/v1/update")
     default void updateShortLink(@RequestBody ShortLinkUpdateReqDTO requestParam) {
         HttpUtil.post("http://127.0.0.1:8001/api/short-link/v1/update", JSONUtil.toJsonStr(requestParam));
     }
 
+    /**
+     * 根据url获取目标网站title
+     */
+    default Result<String> getTitleByUrl(String url) {
+        HashMap<String, Object> hashMap = new HashMap<>();
+        hashMap.put("url", url);
+        String result = HttpUtil.get("http://127.0.0.1:8001/api/short-link/v1/title", hashMap);
+        return JSON.parseObject(result, new TypeReference<>(){});
+    }
 
 }

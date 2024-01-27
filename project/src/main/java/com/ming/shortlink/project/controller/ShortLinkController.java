@@ -59,6 +59,9 @@ public class ShortLinkController {
         return Results.success(shortLinkService.updateShortLink(requestParam));
     }
 
+    /**
+     * 短链接跳转原始链接
+     */
     @GetMapping("/{short-uri}")
     public void restoreUrl(@PathVariable("short-uri") String shortUri, HttpServletRequest request, HttpServletResponse response) {
         shortLinkService.restoreUrl(shortUri, request, response);

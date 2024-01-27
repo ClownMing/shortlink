@@ -22,6 +22,7 @@ import com.ming.shortlink.project.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.ming.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.ming.shortlink.project.service.ShortLinkService;
 import com.ming.shortlink.project.toolkit.HashUtil;
+import com.ming.shortlink.project.toolkit.LinkUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -87,6 +89,12 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 throw new ServiceException("短链接生成重复");
             }
         }
+        // 缓存预热
+        stringRedisTemplate.opsForValue().set(String.format(
+                GOTO_SHORT_LINK_KEY, fullShortUrl),
+                requestParam.getOriginUrl(),
+                LinkUtil.getLinkCacheValidTime(requestParam.getValidDate()),
+                TimeUnit.MILLISECONDS);
         shortUriCreateCachePenetrationBloomFilter.add(fullShortUrl);
         return ShortLinkCreateRespDTO.builder()
                 .fullShortUrl("http://" + shortLinkDO.getFullShortUrl())
@@ -220,8 +228,17 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .eq(ShortLinkDO::getEnableStatus, 0);
             ShortLinkDO shortLinkDO = baseMapper.selectOne(queryWrapper);
             if (shortLinkDO != null) {
+                // 说明已经过期了
+                if(shortLinkDO.getValidDate() != null && shortLinkDO.getValidDate().before(new Date())) {
+                    stringRedisTemplate.opsForValue().set(String.format(GOTO_IS_NULL_SHORT_LINK_KEY, fullShortUrl), "-", 30, TimeUnit.MINUTES);
+                }
                 try {
-                    stringRedisTemplate.opsForValue().set((String.format(GOTO_SHORT_LINK_KEY, fullShortUrl)), shortLinkDO.getOriginUrl());
+                    stringRedisTemplate.opsForValue().set(String.format(
+                                    GOTO_SHORT_LINK_KEY, fullShortUrl),
+                            shortLinkDO.getOriginUrl(),
+                            LinkUtil.getLinkCacheValidTime(shortLinkDO.getValidDate()),
+                            TimeUnit.MILLISECONDS);
+                    shortUriCreateCachePenetrationBloomFilter.add(fullShortUrl);
                     response.sendRedirect(shortLinkDO.getOriginUrl());
                 } catch (IOException e) {
                     throw new ServiceException("重定向错误");

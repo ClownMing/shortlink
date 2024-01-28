@@ -3,6 +3,7 @@ package com.ming.shortlink.project.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.ming.shortlink.project.common.convention.result.Result;
 import com.ming.shortlink.project.common.convention.result.Results;
+import com.ming.shortlink.project.dto.req.RecycleBinRecoverReqDTO;
 import com.ming.shortlink.project.dto.req.RecycleBinSaveReqDTO;
 import com.ming.shortlink.project.dto.req.ShortLinkRecycleBinPageReqDTO;
 import com.ming.shortlink.project.dto.resp.ShortLinkPageRespDTO;
@@ -35,8 +36,17 @@ public class RecycleBinController {
     /**
      * 分页查询回收站
      */
-    @GetMapping("/api/short-link/recycle-bin/v1/page")
+    @GetMapping("/api/short-link/v1/recycle-bin/page")
     public Result<IPage<ShortLinkPageRespDTO>> pageShortLink(ShortLinkRecycleBinPageReqDTO requestParam) {
         return Results.success(recycleBinService.pageShortLink(requestParam));
+    }
+
+    /**
+     * 恢复回收站短链接
+     */
+    @PostMapping("/api/short-link/v1/recycle-bin/recover")
+    public Result<Void> recoverRecycleBin(@RequestBody RecycleBinRecoverReqDTO requestParam) {
+        recycleBinService.recoverRecycleBin(requestParam);
+        return Results.success();
     }
 }

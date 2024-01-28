@@ -5,6 +5,7 @@ import com.ming.shortlink.admin.common.convention.result.Result;
 import com.ming.shortlink.admin.common.convention.result.Results;
 import com.ming.shortlink.admin.remote.ShortLinkRemoteService;
 import com.ming.shortlink.admin.remote.dto.req.RecycleBinRecoverReqDTO;
+import com.ming.shortlink.admin.remote.dto.req.RecycleBinRemoveReqDTO;
 import com.ming.shortlink.admin.remote.dto.req.RecycleBinSaveReqDTO;
 import com.ming.shortlink.admin.remote.dto.req.ShortLinkRecycleBinPageReqDTO;
 import com.ming.shortlink.admin.remote.dto.resp.ShortLinkPageRespDTO;
@@ -52,6 +53,17 @@ public class RecycleBinController {
         ShortLinkRemoteService shortLinkRemoteService = new ShortLinkRemoteService() {
         };
         shortLinkRemoteService.recoverRecycleBin(requestParam);
+        return Results.success();
+    }
+
+    /**
+     * 回收站移除功能
+     */
+    @PostMapping("/api/short-link/admin/v1/recycle-bin/remove")
+    public Result<Void> removeRecycleBin(@RequestBody RecycleBinRemoveReqDTO requestParam) {
+        ShortLinkRemoteService shortLinkRemoteService = new ShortLinkRemoteService() {
+        };
+        shortLinkRemoteService.removeRecycleBin(requestParam);
         return Results.success();
     }
 }

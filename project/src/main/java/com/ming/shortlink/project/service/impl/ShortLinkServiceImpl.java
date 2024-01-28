@@ -96,7 +96,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         }
         // 缓存预热
         stringRedisTemplate.opsForValue().set(String.format(
-                GOTO_SHORT_LINK_KEY, fullShortUrl),
+                        GOTO_SHORT_LINK_KEY, fullShortUrl),
                 requestParam.getOriginUrl(),
                 LinkUtil.getLinkCacheValidTime(requestParam.getValidDate()),
                 TimeUnit.MILLISECONDS);
@@ -203,7 +203,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            return ;
+            return;
         }
         // 缓存穿透 -- 空对象判断 如果有，直接返回，否则查询数据库
         String gotoIsNullShortLink = stringRedisTemplate.opsForValue().get(String.format(GOTO_IS_NULL_SHORT_LINK_KEY, fullShortUrl));
@@ -213,7 +213,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            return ;
+            return;
         }
         // 通过分布式锁，查询数据库
         RLock lock = redissonClient.getLock(String.format(LOCK_GOTO_SHORT_LINK_KEY, fullShortUrl));
@@ -247,28 +247,26 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .eq(ShortLinkDO::getDelFlag, 0)
                     .eq(ShortLinkDO::getEnableStatus, 0);
             ShortLinkDO shortLinkDO = baseMapper.selectOne(queryWrapper);
-            if (shortLinkDO != null) {
+            if (shortLinkDO == null || (shortLinkDO.getValidDate() != null && shortLinkDO.getValidDate().before(new Date()))) {
                 // 说明已经过期了
-                if(shortLinkDO.getValidDate() != null && shortLinkDO.getValidDate().before(new Date())) {
-                    stringRedisTemplate.opsForValue().set(String.format(GOTO_IS_NULL_SHORT_LINK_KEY, fullShortUrl), "-", 30, TimeUnit.MINUTES);
-                    try {
-                        response.sendRedirect("/page/notfound");
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                    return;
-                }
+                stringRedisTemplate.opsForValue().set(String.format(GOTO_IS_NULL_SHORT_LINK_KEY, fullShortUrl), "-", 30, TimeUnit.MINUTES);
                 try {
-                    stringRedisTemplate.opsForValue().set(String.format(
-                                    GOTO_SHORT_LINK_KEY, fullShortUrl),
-                            shortLinkDO.getOriginUrl(),
-                            LinkUtil.getLinkCacheValidTime(shortLinkDO.getValidDate()),
-                            TimeUnit.MILLISECONDS);
-                    shortUriCreateCachePenetrationBloomFilter.add(fullShortUrl);
-                    response.sendRedirect(shortLinkDO.getOriginUrl());
+                    response.sendRedirect("/page/notfound");
+                    return;
                 } catch (IOException e) {
-                    throw new ServiceException("重定向错误");
+                    throw new RuntimeException(e);
                 }
+            }
+            stringRedisTemplate.opsForValue().set(String.format(
+                            GOTO_SHORT_LINK_KEY, fullShortUrl),
+                    shortLinkDO.getOriginUrl(),
+                    LinkUtil.getLinkCacheValidTime(shortLinkDO.getValidDate()),
+                    TimeUnit.MILLISECONDS);
+            shortUriCreateCachePenetrationBloomFilter.add(fullShortUrl);
+            try {
+                response.sendRedirect(shortLinkDO.getOriginUrl());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         } finally {
             lock.unlock();
@@ -307,7 +305,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         Element link = doc.select("link[href~=.*\\.(ico|png)]").first();
         try {
             assert link != null;
-        }catch (Exception e) {
+        } catch (Exception e) {
             throw new ServiceException("获取网站图标出错");
         }
         return link.absUrl("href").isEmpty() ? null : link.absUrl("href");

@@ -61,8 +61,13 @@ public class ClientUtil {
     }
 
     public static String getClientOS(HttpServletRequest request) {
-        String userAgentString = request.getHeader("User-Agent");
-        UserAgent userAgent = UserAgent.parseUserAgentString(userAgentString);
+        UserAgent userAgent = UserAgent.parseUserAgentString(request.getHeader("User-Agent"));
         return userAgent.getOperatingSystem().getName();
+    }
+
+
+    public static String getBrowser(HttpServletRequest request) {
+        UserAgent userAgent = UserAgent.parseUserAgentString(request.getHeader("User-Agent"));
+        return userAgent.getBrowser().toString();
     }
 }

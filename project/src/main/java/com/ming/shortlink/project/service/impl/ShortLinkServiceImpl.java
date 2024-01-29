@@ -82,6 +82,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     private final LinkOsStatsMapper linkOsStatsMapper;
 
+    private final LinkBrowserStatsMapper linkBrowserStatsMapper;
+
     @Value("${short-link.stats.locale.amap-key}")
     private String statsLocaleAMapKey;
 
@@ -374,6 +376,15 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .date(date)
                         .build();
                 linkOsStatsMapper.shortLinkOsStats(linkOsStatsDO);
+                LinkBrowserStatsDO linkBrowserStatsDO = LinkBrowserStatsDO.builder()
+                        .id(SnowUtil.getSnowflakeNextId())
+                        .browser(ClientUtil.getBrowser(request))
+                        .cnt(1)
+                        .fullShortUrl(fullShortUrl)
+                        .gid(gid)
+                        .date(date)
+                        .build();
+                linkBrowserStatsMapper.shortLinkBrowserStats(linkBrowserStatsDO);
             }
 
 

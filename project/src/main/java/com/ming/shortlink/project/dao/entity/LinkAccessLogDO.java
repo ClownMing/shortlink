@@ -1,23 +1,20 @@
 package com.ming.shortlink.project.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ming.shortlink.project.common.database.BaseDO;
 import lombok.*;
 
-import java.util.Date;
-
 /**
  * @author clownMing
- *  浏览器统计实体
+ * 短链接访问日志实体
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@TableName("t_link_browser_stats")
-public class LinkBrowserStatsDO extends BaseDO {
+@TableName("t_link_access_logs")
+public class LinkAccessLogDO extends BaseDO {
     /**
      * id
      */
@@ -34,18 +31,22 @@ public class LinkBrowserStatsDO extends BaseDO {
     private String gid;
 
     /**
-     * 日期
+     * 用户信息
      */
-    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
-    private Date date;
-
-    /**
-     * 访问量
-     */
-    private Integer cnt;
+    private String user;
 
     /**
      * 浏览器
      */
     private String browser;
+
+    /**
+     * 操作系统
+     */
+    private String os;
+
+    /**
+     * ip
+     */
+    private String ip;
 }

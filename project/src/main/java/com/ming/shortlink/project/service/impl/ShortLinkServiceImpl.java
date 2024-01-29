@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.ming.shortlink.project.common.constant.RedisKeyConstant.*;
 import static com.ming.shortlink.project.common.constant.ShortLinkConstant.AMAP_REMOTE_URL;
@@ -83,6 +84,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final LinkOsStatsMapper linkOsStatsMapper;
 
     private final LinkBrowserStatsMapper linkBrowserStatsMapper;
+
+    private final LinkAccessLogMapper linkAccessLogMapper;
 
     @Value("${short-link.stats.locale.amap-key}")
     private String statsLocaleAMapKey;
@@ -298,22 +301,24 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private void shortLinkStats(String fullShortUrl, String gid, HttpServletRequest request, HttpServletResponse response) {
         AtomicBoolean uvFirstFlag = new AtomicBoolean();
         Cookie[] cookies = request.getCookies();
+        AtomicReference<String> uv = new AtomicReference<>();
         Runnable addResponseCookieTask = () -> {
-            String uv = UUID.fastUUID().toString();
-            Cookie uvCookie = new Cookie("uv", uv);
+            uv.set(UUID.fastUUID().toString());
+            Cookie uvCookie = new Cookie("uv", uv.get());
             uvCookie.setMaxAge(60 * 60 * 24 * 15);
             uvCookie.setPath(StrUtil.sub(fullShortUrl, fullShortUrl.indexOf("/"), fullShortUrl.length()));
             response.addCookie(uvCookie);
-            stringRedisTemplate.opsForSet().add("short-link:stats:uv:" + fullShortUrl, uv);
+            stringRedisTemplate.opsForSet().add("short-link:stats:uv:" + fullShortUrl, uv.get());
             uvFirstFlag.set(Boolean.TRUE);
         };
         try {
-            if(ArrayUtil.isNotEmpty(cookies)) {
+            if (ArrayUtil.isNotEmpty(cookies)) {
                 Arrays.stream(cookies)
                         .filter(each -> Objects.equals("uv", each.getName()))
                         .findFirst()
                         .map(Cookie::getValue)
                         .ifPresentOrElse(each -> {
+                            uv.set(each);
                             Long uvAdd = stringRedisTemplate.opsForSet().add("short-link:stats:uv:" + fullShortUrl, each);
                             uvFirstFlag.set(uvAdd != null && uvAdd > 0L);
                         }, addResponseCookieTask);
@@ -323,7 +328,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             String ipAddress = ClientUtil.getIpAddress(request);
             Long uipAdd = stringRedisTemplate.opsForSet().add("short-link:stats:ip:" + fullShortUrl, ipAddress);
             boolean uipFirstFlag = uipAdd != null && uipAdd > 0L;
-            if(StrUtil.isEmpty(gid)) {
+            if (StrUtil.isEmpty(gid)) {
                 LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
                         .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
                 ShortLinkGotoDO linkGotoDO = shortLinkGotoMapper.selectOne(queryWrapper);
@@ -352,7 +357,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             // 状态码
             String infocode = jsonObject.getString("infocode");
             LinkLocaleStatsDO linkLocaleStatsDO;
-            if(StrUtil.isNotBlank(infocode) && Objects.equals(infocode, "10000")) {
+            if (StrUtil.isNotBlank(infocode) && Objects.equals(infocode, "10000")) {
                 String province = jsonObject.getString("province");
                 boolean unknownFlag = StrUtil.isBlank(province);
                 linkLocaleStatsDO = LinkLocaleStatsDO.builder()
@@ -385,8 +390,17 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .date(date)
                         .build();
                 linkBrowserStatsMapper.shortLinkBrowserStats(linkBrowserStatsDO);
+                LinkAccessLogDO linkAccessLogDO = LinkAccessLogDO.builder()
+                        .id(SnowUtil.getSnowflakeNextId())
+                        .fullShortUrl(fullShortUrl)
+                        .gid(gid)
+                        .user(uv.get())
+                        .browser(ClientUtil.getBrowser(request))
+                        .os(ClientUtil.getClientOS(request))
+                        .ip(ipAddress)
+                        .build();
+                linkAccessLogMapper.insert(linkAccessLogDO);
             }
-
 
 
         } catch (Exception ex) {

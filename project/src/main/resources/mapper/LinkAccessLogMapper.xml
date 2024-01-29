@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ming.shortlink.project.dao.mapper.LinkAccessLogMapper">
+
+<insert id="shortLinkAccessLogStats">
+    INSERT INTO t_link_access_logs
+    (
+     id,
+     full_short_url,
+     gid,
+     `user`,
+     browser,
+     os,
+     ip,
+     create_time,
+     update_time,
+     del_flag)
+    VALUES (
+            #{id},
+            #{fullShortUrl},
+            #{gid},
+            #{user},
+            #{browser},
+            #{os},
+            #{ip},
+            NOW(),
+            NOW(),
+            0)
+    ON DUPLICATE KEY
+    UPDATE
+        update_time = NOW()
+</insert>
+</mapper>

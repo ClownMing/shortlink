@@ -9,15 +9,15 @@ import java.util.Date;
 
 /**
  * @author clownMing
- * 统计访问设备实体
+ * 统计监控网络实体
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_link_device_stats")
-public class LinkDeviceStatsDO extends BaseDO {
+@TableName("t_link_network_stats")
+public class LinkNetworkStatsDO extends BaseDO {
 
     /**
      * id
@@ -46,7 +46,7 @@ public class LinkDeviceStatsDO extends BaseDO {
     private Integer cnt;
 
     /**
-     * 访问设备
+     * 访问网络
      */
-    private String device;
+    private String network;
 }

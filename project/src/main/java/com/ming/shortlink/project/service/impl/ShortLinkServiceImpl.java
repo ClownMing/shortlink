@@ -89,6 +89,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     private final LinkDeviceStatsMapper linkDeviceStatsMapper;
 
+    private final LinkNetworkStatsMapper linkNetworkStatsMapper;
+
     @Value("${short-link.stats.locale.amap-key}")
     private String statsLocaleAMapKey;
 
@@ -411,6 +413,17 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .date(date)
                         .build();
                 linkDeviceStatsMapper.shortLinkDeviceStats(linkDeviceStatsDO);
+
+                LinkNetworkStatsDO linkNetworkStatsDO = LinkNetworkStatsDO.builder()
+                        .id(SnowUtil.getSnowflakeNextId())
+                        .network(ClientUtil.getNetworkInterfaces())
+                        .cnt(1)
+                        .fullShortUrl(fullShortUrl)
+                        .gid(gid)
+                        .date(date)
+                        .build();
+                linkNetworkStatsMapper.shortLinkNetwork(linkNetworkStatsDO);
+
             }
 
 

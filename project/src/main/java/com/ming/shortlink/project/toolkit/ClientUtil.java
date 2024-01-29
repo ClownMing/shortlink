@@ -1,5 +1,6 @@
 package com.ming.shortlink.project.toolkit;
 
+import eu.bitwalker.useragentutils.DeviceType;
 import eu.bitwalker.useragentutils.UserAgent;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -69,5 +70,11 @@ public class ClientUtil {
     public static String getBrowser(HttpServletRequest request) {
         UserAgent userAgent = UserAgent.parseUserAgentString(request.getHeader("User-Agent"));
         return userAgent.getBrowser().toString();
+    }
+
+    public static String getDeviceType(HttpServletRequest request) {
+        UserAgent userAgent = UserAgent.parseUserAgentString(request.getHeader("User-Agent"));
+        DeviceType deviceType = userAgent.getOperatingSystem().getDeviceType();
+        return deviceType.toString();
     }
 }

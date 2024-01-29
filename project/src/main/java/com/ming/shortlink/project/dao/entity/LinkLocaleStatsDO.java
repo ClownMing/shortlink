@@ -1,5 +1,7 @@
 package com.ming.shortlink.project.dao.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ming.shortlink.project.common.database.BaseDO;

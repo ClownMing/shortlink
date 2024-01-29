@@ -7,7 +7,9 @@
 <insert id="shortLinkStats">
     INSERT INTO
         t_link_access_stats
-        (full_short_url,
+        (
+         id,
+         full_short_url,
          gid,
          date,
          pv,
@@ -18,7 +20,19 @@
          create_time,
          update_time,
          del_flag)
-        VALUES(#{fullShortUrl}, #{gid}, #{date}, #{pv}, #{uv}, #{uip}, #{hour}, #{weekday}, NOW(), NOW(), 0)
+        VALUES(
+               #{id},
+               #{fullShortUrl},
+               #{gid},
+               #{date},
+               #{pv},
+               #{uv},
+               #{uip},
+               #{hour},
+               #{weekday},
+               NOW(),
+               NOW(),
+               0)
     ON DUPLICATE KEY UPDATE pv = pv + #{pv},
         uv = uv + #{uv},
         uip = uip + #{uip},

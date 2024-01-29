@@ -14,5 +14,5 @@ public interface LinkLocaleStatsMapper extends BaseMapper<LinkLocaleStatsDO> {
     /**
      * 地区统计
      */
-    void shortLinkLocalState(LinkLocaleStatsDO linkLocaleStatsDO);
+    void shortLinkLocalStats(LinkLocaleStatsDO linkLocaleStatsDO);
 }

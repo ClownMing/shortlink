@@ -1,5 +1,6 @@
 package com.ming.shortlink.project.toolkit;
 
+import eu.bitwalker.useragentutils.UserAgent;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.net.InetAddress;
@@ -8,7 +9,7 @@ import java.net.UnknownHostException;
 /**
  * ip 工具类
  */
-public class IpUtil {
+public class ClientUtil {
     private static final String UNKNOWN = "unknown";
     private static final String LOCALHOST_IP = "127.0.0.1";
     private static final String LOCALHOST_IPV6 = "0:0:0:0:0:0:0:1";
@@ -57,5 +58,11 @@ public class IpUtil {
         }
 
         return LOCALHOST_IPV6.equals(ip) ? LOCALHOST_IP : ip;
+    }
+
+    public static String getClientOS(HttpServletRequest request) {
+        String userAgentString = request.getHeader("User-Agent");
+        UserAgent userAgent = UserAgent.parseUserAgentString(userAgentString);
+        return userAgent.getOperatingSystem().getName();
     }
 }

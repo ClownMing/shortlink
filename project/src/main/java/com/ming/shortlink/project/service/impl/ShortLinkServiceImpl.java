@@ -17,14 +17,8 @@ import com.ming.shortlink.project.common.convention.exception.ClientException;
 import com.ming.shortlink.project.common.convention.exception.ServiceException;
 import com.ming.shortlink.project.common.enums.UserAgentEnum;
 import com.ming.shortlink.project.common.enums.ValidDateTypeEnum;
-import com.ming.shortlink.project.dao.entity.LinkAccessStatsDO;
-import com.ming.shortlink.project.dao.entity.LinkLocaleStatsDO;
-import com.ming.shortlink.project.dao.entity.ShortLinkDO;
-import com.ming.shortlink.project.dao.entity.ShortLinkGotoDO;
-import com.ming.shortlink.project.dao.mapper.LinkAccessStatsMapper;
-import com.ming.shortlink.project.dao.mapper.LinkLocaleStatsMapper;
-import com.ming.shortlink.project.dao.mapper.ShortLinkGotoMapper;
-import com.ming.shortlink.project.dao.mapper.ShortLinkMapper;
+import com.ming.shortlink.project.dao.entity.*;
+import com.ming.shortlink.project.dao.mapper.*;
 import com.ming.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.ming.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import com.ming.shortlink.project.dto.req.ShortLinkUpdateReqDTO;
@@ -32,9 +26,10 @@ import com.ming.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
 import com.ming.shortlink.project.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.ming.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.ming.shortlink.project.service.ShortLinkService;
+import com.ming.shortlink.project.toolkit.ClientUtil;
 import com.ming.shortlink.project.toolkit.HashUtil;
-import com.ming.shortlink.project.toolkit.IpUtil;
 import com.ming.shortlink.project.toolkit.LinkUtil;
+import com.ming.shortlink.project.toolkit.SnowUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -84,6 +79,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final LinkAccessStatsMapper linkAccessStatsMapper;
 
     private final LinkLocaleStatsMapper linkLocaleStatsMapper;
+
+    private final LinkOsStatsMapper linkOsStatsMapper;
 
     @Value("${short-link.stats.locale.amap-key}")
     private String statsLocaleAMapKey;
@@ -321,7 +318,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             } else {
                 addResponseCookieTask.run();
             }
-            String ipAddress = IpUtil.getIpAddress(request);
+            String ipAddress = ClientUtil.getIpAddress(request);
             Long uipAdd = stringRedisTemplate.opsForSet().add("short-link:stats:ip:" + fullShortUrl, ipAddress);
             boolean uipFirstFlag = uipAdd != null && uipAdd > 0L;
             if(StrUtil.isEmpty(gid)) {
@@ -334,6 +331,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             int weekValue = DateUtil.dayOfWeekEnum(date).getIso8601Value();
             int hour = DateUtil.hour(date, true);
             LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
+                    .id(SnowUtil.getSnowflakeNextId())
                     .pv(1)
                     .uv(uvFirstFlag.get() ? 1 : 0)
                     .uip(uipFirstFlag ? 1 : 0)
@@ -356,6 +354,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 String province = jsonObject.getString("province");
                 boolean unknownFlag = StrUtil.isBlank(province);
                 linkLocaleStatsDO = LinkLocaleStatsDO.builder()
+                        .id(SnowUtil.getSnowflakeNextId())
                         .province(unknownFlag ? "未知" : province)
                         .city(unknownFlag ? "未知" : jsonObject.getString("city"))
                         .adcode(unknownFlag ? "未知" : jsonObject.getString("adcode"))
@@ -365,7 +364,16 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .gid(gid)
                         .date(date)
                         .build();
-                linkLocaleStatsMapper.shortLinkLocalState(linkLocaleStatsDO);
+                linkLocaleStatsMapper.shortLinkLocalStats(linkLocaleStatsDO);
+                LinkOsStatsDO linkOsStatsDO = LinkOsStatsDO.builder()
+                        .id(SnowUtil.getSnowflakeNextId())
+                        .os(ClientUtil.getClientOS(request))
+                        .cnt(1)
+                        .fullShortUrl(fullShortUrl)
+                        .gid(gid)
+                        .date(date)
+                        .build();
+                linkOsStatsMapper.shortLinkOsStats(linkOsStatsDO);
             }
 
 

@@ -28,6 +28,7 @@ import com.ming.shortlink.project.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.ming.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.ming.shortlink.project.service.ShortLinkService;
 import com.ming.shortlink.project.toolkit.HashUtil;
+import com.ming.shortlink.project.toolkit.IpUtil;
 import com.ming.shortlink.project.toolkit.LinkUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -305,13 +306,15 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .findFirst()
                         .map(Cookie::getValue)
                         .ifPresentOrElse(each -> {
-                            Long add = stringRedisTemplate.opsForSet().add("short-link:stats:uv:" + fullShortUrl, each);
-                            uvFirstFlag.set(add != null && add > 0L);
+                            Long uvAdd = stringRedisTemplate.opsForSet().add("short-link:stats:uv:" + fullShortUrl, each);
+                            uvFirstFlag.set(uvAdd != null && uvAdd > 0L);
                         }, addResponseCookieTask);
             } else {
                 addResponseCookieTask.run();
             }
-
+            String ipAddress = IpUtil.getIpAddress(request);
+            Long uipAdd = stringRedisTemplate.opsForSet().add("short-link:stats:ip:" + fullShortUrl, ipAddress);
+            boolean uipFirstFlag = uipAdd != null && uipAdd > 0L;
             if(StrUtil.isEmpty(gid)) {
                 LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
                         .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
@@ -324,7 +327,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
                     .pv(1)
                     .uv(uvFirstFlag.get() ? 1 : 0)
-                    .uip(1)
+                    .uip(uipFirstFlag ? 1 : 0)
                     .hour(hour)
                     .weekday(weekValue)
                     .fullShortUrl(fullShortUrl)

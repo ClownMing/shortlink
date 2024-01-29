@@ -21,3 +21,8 @@ spring:
 mybatis-plus:
   global-config:
     banner: off
+
+short-link:
+  stats:
+    locale:
+      amap-key: 326b6e33a6347c39a52dc40570e4d011

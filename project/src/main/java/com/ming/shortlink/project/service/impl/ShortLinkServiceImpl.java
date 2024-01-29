@@ -5,6 +5,9 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.http.HttpUtil;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -15,9 +18,11 @@ import com.ming.shortlink.project.common.convention.exception.ServiceException;
 import com.ming.shortlink.project.common.enums.UserAgentEnum;
 import com.ming.shortlink.project.common.enums.ValidDateTypeEnum;
 import com.ming.shortlink.project.dao.entity.LinkAccessStatsDO;
+import com.ming.shortlink.project.dao.entity.LinkLocaleStatsDO;
 import com.ming.shortlink.project.dao.entity.ShortLinkDO;
 import com.ming.shortlink.project.dao.entity.ShortLinkGotoDO;
 import com.ming.shortlink.project.dao.mapper.LinkAccessStatsMapper;
+import com.ming.shortlink.project.dao.mapper.LinkLocaleStatsMapper;
 import com.ming.shortlink.project.dao.mapper.ShortLinkGotoMapper;
 import com.ming.shortlink.project.dao.mapper.ShortLinkMapper;
 import com.ming.shortlink.project.dto.req.ShortLinkCreateReqDTO;
@@ -42,20 +47,19 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.ming.shortlink.project.common.constant.RedisKeyConstant.*;
+import static com.ming.shortlink.project.common.constant.ShortLinkConstant.AMAP_REMOTE_URL;
 
 /**
  * @author clownMing
@@ -78,6 +82,11 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final RedissonClient redissonClient;
 
     private final LinkAccessStatsMapper linkAccessStatsMapper;
+
+    private final LinkLocaleStatsMapper linkLocaleStatsMapper;
+
+    @Value("${short-link.stats.locale.amap-key}")
+    private String statsLocaleAMapKey;
 
     @Transactional
     @Override
@@ -335,6 +344,32 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .date(date)
                     .build();
             linkAccessStatsMapper.shortLinkStats(linkAccessStatsDO);
+            HashMap<String, Object> localeParamMap = new HashMap<>();
+            localeParamMap.put("key", statsLocaleAMapKey);
+            localeParamMap.put("ip", ipAddress);
+            String mapResultStr = HttpUtil.get(AMAP_REMOTE_URL, localeParamMap);
+            JSONObject jsonObject = JSON.parseObject(mapResultStr);
+            // 状态码
+            String infocode = jsonObject.getString("infocode");
+            LinkLocaleStatsDO linkLocaleStatsDO;
+            if(StrUtil.isNotBlank(infocode) && Objects.equals(infocode, "10000")) {
+                String province = jsonObject.getString("province");
+                boolean unknownFlag = StrUtil.isBlank(province);
+                linkLocaleStatsDO = LinkLocaleStatsDO.builder()
+                        .province(unknownFlag ? "未知" : province)
+                        .city(unknownFlag ? "未知" : jsonObject.getString("city"))
+                        .adcode(unknownFlag ? "未知" : jsonObject.getString("adcode"))
+                        .country("中国")
+                        .cnt(1)
+                        .fullShortUrl(fullShortUrl)
+                        .gid(gid)
+                        .date(date)
+                        .build();
+                linkLocaleStatsMapper.shortLinkLocalState(linkLocaleStatsDO);
+            }
+
+
+
         } catch (Exception ex) {
             LOG.error("短链接访问信息统计错误：{}", ex.getMessage());
         }

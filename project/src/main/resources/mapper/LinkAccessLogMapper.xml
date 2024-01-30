@@ -4,32 +4,66 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ming.shortlink.project.dao.mapper.LinkAccessLogMapper">
 
-<insert id="shortLinkAccessLogStats">
-    INSERT INTO t_link_access_logs
-    (
-     id,
-     full_short_url,
-     gid,
-     `user`,
-     browser,
-     os,
-     ip,
-     create_time,
-     update_time,
-     del_flag)
-    VALUES (
-            #{id},
-            #{fullShortUrl},
-            #{gid},
-            #{user},
-            #{browser},
-            #{os},
-            #{ip},
-            NOW(),
-            NOW(),
-            0)
-    ON DUPLICATE KEY
-    UPDATE
-        update_time = NOW()
-</insert>
+    <insert id="shortLinkAccessLogStats">
+        INSERT INTO t_link_access_logs
+        (id,
+         full_short_url,
+         gid,
+         `user`,
+         browser,
+         os,
+         ip,
+         create_time,
+         update_time,
+         del_flag)
+        VALUES (#{id},
+                #{fullShortUrl},
+                #{gid},
+                #{user},
+                #{browser},
+                #{os},
+                #{ip},
+                NOW(),
+                NOW(),
+                0) ON DUPLICATE KEY
+        UPDATE
+            update_time = NOW()
+    </insert>
+
+    <select id="listTopIpByShortLink" resultType="hashmap">
+        SELECT ip,
+               COUNT(ip) AS count
+        FROM
+            t_link_access_logs
+        WHERE
+            full_short_url = #{fullShortUrl}
+          AND gid = #{gid}
+          AND create_time BETWEEN #{startDate} and #{endDate}
+        GROUP BY
+            full_short_url
+                , gid
+                , ip
+        ORDER BY
+            count DESC
+            LIMIT 5
+    </select>
+
+    <select id="findUvTypeCntByShortLink" resultType="hashmap">
+        SELECT
+        SUM(old_user) AS oldUserCnt,
+        SUM(new_user) AS newUserCnt
+        FROM (
+        SELECT
+        CASE WHEN COUNT(DISTINCT DATE(create_time)) > 1 THEN 1 ELSE 0 END AS old_user,
+        CASE WHEN COUNT(DISTINCT DATE(create_time)) = 1 AND MAX(create_time) >= #{startDate} AND MAX(create_time)&lt;=
+        #{endDate} THEN 1 ELSE 0 END AS new_user
+        FROM
+        t_link_access_logs
+        WHERE
+        full_short_url = #{fullShortUrl}
+        AND gid = #{gid}
+        GROUP BY
+        user
+        ) AS user_counts
+    </select>
 </mapper>

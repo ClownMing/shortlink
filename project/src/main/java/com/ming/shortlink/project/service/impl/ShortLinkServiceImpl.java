@@ -358,6 +358,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             localeParamMap.put("ip", ipAddress);
             String mapResultStr = HttpUtil.get(AMAP_REMOTE_URL, localeParamMap);
             JSONObject jsonObject = JSON.parseObject(mapResultStr);
+            String actualProvince;
+            String actualCity;
             // 状态码
             String infocode = jsonObject.getString("infocode");
             LinkLocaleStatsDO linkLocaleStatsDO;
@@ -366,8 +368,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 boolean unknownFlag = StrUtil.isBlank(province);
                 linkLocaleStatsDO = LinkLocaleStatsDO.builder()
                         .id(SnowUtil.getSnowflakeNextId())
-                        .province(unknownFlag ? "未知" : province)
-                        .city(unknownFlag ? "未知" : jsonObject.getString("city"))
+                        .province(actualProvince = unknownFlag ? "未知" : province)
+                        .city(actualCity = unknownFlag ? "未知" : jsonObject.getString("city"))
                         .adcode(unknownFlag ? "未知" : jsonObject.getString("adcode"))
                         .country("中国")
                         .cnt(1)
@@ -398,6 +400,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .id(SnowUtil.getSnowflakeNextId())
                         .fullShortUrl(fullShortUrl)
                         .gid(gid)
+                        .network(ClientUtil.getNetworkInterfaces())
+                        .device(ClientUtil.getDeviceType(request))
+                        .locale(StrUtil.join("-", "中国", actualProvince, actualCity))
                         .user(uv.get())
                         .browser(ClientUtil.getBrowser(request))
                         .os(ClientUtil.getClientOS(request))

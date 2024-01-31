@@ -9,7 +9,6 @@ import com.ming.shortlink.admin.common.convention.result.Result;
 import com.ming.shortlink.admin.common.convention.result.Results;
 import com.ming.shortlink.admin.remote.dto.req.*;
 import com.ming.shortlink.admin.remote.dto.resp.*;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.HashMap;
@@ -38,6 +37,7 @@ public interface ShortLinkRemoteService {
     default Result<IPage<ShortLinkPageRespDTO>> pageShortLink(ShortLinkPageReqDTO requestParam) {
         HashMap<String, Object> requestMap = new HashMap<>();
         requestMap.put("gid", requestParam.getGid());
+        requestMap.put("orderTag", requestParam.getOrderTag());
         requestMap.put("current", requestParam.getCurrent());
         requestMap.put("size", requestParam.getSize());
         String resultPageStr = HttpUtil.get("http://127.0.0.1:8001/api/short-link/v1/page", requestMap);
@@ -127,7 +127,6 @@ public interface ShortLinkRemoteService {
     /**
      * 访问单个短链接指定时间内访问记录监控数据
      */
-    @GetMapping("/api/short-link/v1/stats/access-record")
     default Result<IPage<ShortLinkStatsAccessRecordRespDTO>> shortLinkStatsAccessRecord(ShortLinkStatsAccessRecordReqDTO requestParam) {
         HashMap<String, Object> requestMap = new HashMap<>();
         requestMap.put("current", requestParam.getCurrent());

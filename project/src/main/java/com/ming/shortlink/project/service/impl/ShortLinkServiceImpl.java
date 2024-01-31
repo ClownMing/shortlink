@@ -103,6 +103,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         String fullShortUrl = requestParam.getDomain() + "/" + shortLinkSuffix;
         ShortLinkDO shortLinkDO = BeanUtil.toBean(requestParam, ShortLinkDO.class);
         shortLinkDO.setShortUri(shortLinkSuffix);
+        shortLinkDO.setId(SnowUtil.getSnowflakeNextId());
         shortLinkDO.setEnableStatus(0);
         shortLinkDO.setFullShortUrl(fullShortUrl);
         shortLinkDO.setFavicon(getFavicon(requestParam.getOriginUrl()));
@@ -434,14 +435,19 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .build();
                 linkNetworkStatsMapper.shortLinkNetwork(linkNetworkStatsDO);
                 baseMapper.incrementStats(gid, fullShortUrl, 1, uvFirstFlag.get() ? 1 : 0, uipFirstFlag ? 1 : 0);
+                AtomicBoolean uvTodayFirstFlag = new AtomicBoolean();
+                Long uvTodayAdd = stringRedisTemplate.opsForSet().add("short-link:stats:uv:" + DateUtil.formatDate(date) + ":" + fullShortUrl, uv.get());
+                uvTodayFirstFlag.set(uvTodayAdd != null && uvTodayAdd > 0L);
+                Long uipTodayAdd = stringRedisTemplate.opsForSet().add("short-link:stats:ip:" + DateUtil.formatDate(date) + ":" + fullShortUrl, ipAddress);
+                boolean uipTodayFirstFlag = uipTodayAdd != null && uipTodayAdd > 0L;
                 LinkStatsTodayDO linkStatsTodayDO = LinkStatsTodayDO.builder()
                         .id(SnowUtil.getSnowflakeNextId())
                         .gid(gid)
                         .fullShortUrl(fullShortUrl)
                         .date(date)
                         .todayPv(1)
-                        .todayUv(uvFirstFlag.get() ? 1 : 0)
-                        .todayUip(uipFirstFlag ? 1 : 0)
+                        .todayUv(uvTodayFirstFlag.get() ? 1 : 0)
+                        .todayUip(uipTodayFirstFlag ? 1 : 0)
                         .build();
                 linkStatsTodayMapper.shortLinkTodayStats(linkStatsTodayDO);
             }

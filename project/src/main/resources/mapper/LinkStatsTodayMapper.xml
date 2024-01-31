@@ -7,7 +7,9 @@
    <insert id="shortLinkTodayStats">
        INSERT INTO
            t_link_stats_today
-           (full_short_url,
+           (
+            id,
+            full_short_url,
             gid,
             date,
             today_uv,
@@ -17,6 +19,7 @@
             update_time,
             del_flag)
             VALUES(
+                   #{id},
                    #{fullShortUrl},
                    #{gid},
                    #{date},

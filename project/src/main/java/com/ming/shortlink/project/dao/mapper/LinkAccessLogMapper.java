@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ming.shortlink.project.dao.entity.LinkAccessLogDO;
 import com.ming.shortlink.project.dto.req.ShortLinkStatsReqDTO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.HashMap;
 import java.util.List;
@@ -29,4 +30,9 @@ public interface LinkAccessLogMapper extends BaseMapper<LinkAccessLogDO> {
      * 根据短链接获取指定日期内新旧访客数据
      */
     HashMap<String, Object> findUvTypeCntByShortLink(ShortLinkStatsReqDTO requestParam);
+
+    /**
+     * 获取用户信息是否新老访客
+     */
+    List<HashMap<String, Object>> selectUvTypeByUsers(@Param("gid") String gid, @Param("fullShortUrl") String fullShortUrl, @Param("startDate") String startDate, @Param("endDate") String endDate, @Param("userAccessLogsList") List<String> userAccessLogsList);
 }

@@ -38,7 +38,8 @@
         WHERE
             full_short_url = #{fullShortUrl}
           AND gid = #{gid}
-          AND create_time BETWEEN #{startDate} and #{endDate}
+          AND create_time BETWEEN #{startDate}
+          and #{endDate}
         GROUP BY
             full_short_url
                 , gid
@@ -49,21 +50,38 @@
     </select>
 
     <select id="findUvTypeCntByShortLink" resultType="hashmap">
+        SELECT SUM(old_user) AS oldUserCnt,
+               SUM(new_user) AS newUserCnt
+        FROM (SELECT CASE WHEN COUNT(DISTINCT DATE (create_time)) > 1 THEN 1 ELSE 0 END AS old_user,
+                     CASE
+                         WHEN COUNT(DISTINCT DATE (create_time)) = 1 AND MAX(create_time) >= #{startDate} AND
+                              MAX(create_time) &lt;=
+                              #{endDate} THEN 1
+                         ELSE 0 END                                                     AS new_user
+              FROM t_link_access_logs
+              WHERE full_short_url = #{fullShortUrl}
+                AND gid = #{gid}
+              GROUP BY user) AS user_counts
+    </select>
+
+
+    <select id="selectUvTypeByUsers" resultType="hashmap">
         SELECT
-        SUM(old_user) AS oldUserCnt,
-        SUM(new_user) AS newUserCnt
-        FROM (
-        SELECT
-        CASE WHEN COUNT(DISTINCT DATE(create_time)) > 1 THEN 1 ELSE 0 END AS old_user,
-        CASE WHEN COUNT(DISTINCT DATE(create_time)) = 1 AND MAX(create_time) >= #{startDate} AND MAX(create_time)&lt;=
-        #{endDate} THEN 1 ELSE 0 END AS new_user
+        user,
+        CASE
+        WHEN MIN(create_time) BETWEEN #{startDate} AND #{endDate} THEN '新访客'
+        ELSE '老访客'
+        END AS uvType
         FROM
         t_link_access_logs
         WHERE
         full_short_url = #{fullShortUrl}
         AND gid = #{gid}
+        AND user IN
+        <foreach item='item' index='index' collection='userAccessLogsList' open='(' separator=',' close=')'>
+            #{item}
+        </foreach>
         GROUP BY
         user
-        ) AS user_counts
     </select>
 </mapper>

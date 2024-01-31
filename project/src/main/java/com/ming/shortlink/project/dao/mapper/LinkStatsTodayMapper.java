@@ -10,4 +10,6 @@ import org.apache.ibatis.annotations.Mapper;
  */
 @Mapper
 public interface LinkStatsTodayMapper extends BaseMapper<LinkStatsTodayDO> {
+
+    void shortLinkTodayStats(LinkStatsTodayDO linkStatsTodayDO);
 }

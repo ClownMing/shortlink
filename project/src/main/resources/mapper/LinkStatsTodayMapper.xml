@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ming.shortlink.project.dao.mapper.LinkStatsTodayMapper">
+
+   <insert id="shortLinkTodayStats">
+       INSERT INTO
+           t_link_stats_today
+           (full_short_url,
+            gid,
+            date,
+            today_uv,
+            today_pv,
+            today_uip,
+            create_time,
+            update_time,
+            del_flag)
+            VALUES(
+                   #{fullShortUrl},
+                   #{gid},
+                   #{date},
+                   #{todayUv},
+                   #{todayPv},
+                   #{todayUip},
+                   NOW(),
+                   NOW(),
+                   0)
+       ON DUPLICATE KEY
+            UPDATE
+                today_uv = today_uv + #{todayUv},
+                today_pv = today_pv + #{todayPv},
+                today_uip = today_uip + #{todayUip},
+                update_time = NOW()
+   </insert>
+</mapper>

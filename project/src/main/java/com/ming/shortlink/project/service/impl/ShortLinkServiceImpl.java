@@ -91,6 +91,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     private final LinkNetworkStatsMapper linkNetworkStatsMapper;
 
+    private final LinkStatsTodayMapper linkStatsTodayMapper;
+
     @Value("${short-link.stats.locale.amap-key}")
     private String statsLocaleAMapKey;
 
@@ -432,6 +434,16 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .build();
                 linkNetworkStatsMapper.shortLinkNetwork(linkNetworkStatsDO);
                 baseMapper.incrementStats(gid, fullShortUrl, 1, uvFirstFlag.get() ? 1 : 0, uipFirstFlag ? 1 : 0);
+                LinkStatsTodayDO linkStatsTodayDO = LinkStatsTodayDO.builder()
+                        .id(SnowUtil.getSnowflakeNextId())
+                        .gid(gid)
+                        .fullShortUrl(fullShortUrl)
+                        .date(date)
+                        .todayPv(1)
+                        .todayUv(uvFirstFlag.get() ? 1 : 0)
+                        .todayUip(uipFirstFlag ? 1 : 0)
+                        .build();
+                linkStatsTodayMapper.shortLinkTodayStats(linkStatsTodayDO);
             }
 
 

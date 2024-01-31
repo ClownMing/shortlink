@@ -64,7 +64,6 @@
               GROUP BY user) AS user_counts
     </select>
 
-
     <select id="selectUvTypeByUsers" resultType="hashmap">
         SELECT
         user,
@@ -83,5 +82,20 @@
         </foreach>
         GROUP BY
         user
+    </select>
+
+    <select id="findPvUvUipStatsByShortLink" resultType="com.ming.shortlink.project.dao.entity.LinkAccessStatsDO">
+        SELECT
+                COUNT(user) AS pv,
+                COUNT(DISTINCT user) AS uv,
+                COUNT(DISTINCT ip) AS uip
+            FROM
+                t_link_access_logs
+            WHERE
+                full_short_url = #{fullShortUrl}
+                AND gid = #{gid}
+                AND create_time BETWEEN #{startDate} and #{endDate}
+            GROUP BY
+                full_short_url, gid
     </select>
 </mapper>

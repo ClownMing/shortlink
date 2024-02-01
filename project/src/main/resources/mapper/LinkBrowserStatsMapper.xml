@@ -42,4 +42,17 @@
         GROUP BY
             full_short_url, gid, browser;
     </select>
+
+    <select id="listBrowserStatsByGroup" resultType="hashmap">
+        SELECT browser,
+               SUM(cnt) AS count
+        FROM
+            t_link_browser_stats
+        WHERE
+            gid = #{gid}
+          AND date BETWEEN #{startDate}
+          and #{endDate}
+        GROUP BY
+            gid, browser;
+    </select>
 </mapper>

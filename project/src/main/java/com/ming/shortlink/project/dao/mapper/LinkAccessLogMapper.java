@@ -3,6 +3,7 @@ package com.ming.shortlink.project.dao.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ming.shortlink.project.dao.entity.LinkAccessLogDO;
 import com.ming.shortlink.project.dao.entity.LinkAccessStatsDO;
+import com.ming.shortlink.project.dto.req.ShortLinkGroupStatsReqDTO;
 import com.ming.shortlink.project.dto.req.ShortLinkStatsReqDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -28,6 +29,11 @@ public interface LinkAccessLogMapper extends BaseMapper<LinkAccessLogDO> {
     List<HashMap<String, Object>> listTopIpByShortLink(ShortLinkStatsReqDTO requestParam);
 
     /**
+     * 根据分组获取指定日期内高频访问IP数据
+     */
+    List<HashMap<String, Object>> listTopIpByGroup(ShortLinkGroupStatsReqDTO requestParam);
+
+    /**
      * 根据短链接获取指定日期内新旧访客数据
      */
     HashMap<String, Object> findUvTypeCntByShortLink(ShortLinkStatsReqDTO requestParam);
@@ -41,6 +47,11 @@ public interface LinkAccessLogMapper extends BaseMapper<LinkAccessLogDO> {
      * 根据短链接获取指定日期内PV、UV、UIP数据
      */
     LinkAccessStatsDO findPvUvUipStatsByShortLink(ShortLinkStatsReqDTO shortLinkStatsReqDO);
+
+    /**
+     * 根据分组获取指定日期内PV、UV、UIP数据
+     */
+    LinkAccessStatsDO findPvUvUipStatsByGroup(ShortLinkGroupStatsReqDTO requestParam);
 
     /**
      * 获取分组用户信息是否新老访客

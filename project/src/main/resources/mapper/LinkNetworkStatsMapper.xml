@@ -40,4 +40,15 @@
         GROUP BY
             full_short_url, gid, network
     </select>
+
+    <select id="listNetworkStatsByGroup" resultType="com.ming.shortlink.project.dao.entity.LinkNetworkStatsDO">
+        SELECT network,
+               SUM(cnt) AS cnt
+        FROM t_link_network_stats
+        WHERE gid = #{gid}
+          AND date BETWEEN #{startDate}
+          and #{endDate}
+        GROUP BY
+            gid, network
+    </select>
 </mapper>

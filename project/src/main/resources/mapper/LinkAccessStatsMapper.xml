@@ -3,7 +3,6 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ming.shortlink.project.dao.mapper.LinkAccessStatsMapper">
-
     <insert id="shortLinkStats">
         INSERT INTO t_link_access_stats
         (id,
@@ -53,6 +52,21 @@
             full_short_url, gid, `date`
     </select>
 
+    <select id="listStatsByGroup" resultType="com.ming.shortlink.project.dao.entity.LinkAccessStatsDO">
+        SELECT
+            date,
+            SUM(pv) AS pv,
+            SUM(uv) AS uv,
+            SUM(uip) AS uip
+        FROM
+            t_link_access_stats
+        WHERE
+            gid = #{gid}
+          AND date BETWEEN #{startDate} and #{endDate}
+        GROUP BY
+            gid, `date`
+    </select>
+
     <select id="listHourStatsByShortLink" resultType="com.ming.shortlink.project.dao.entity.LinkAccessStatsDO">
         SELECT
             hour,
@@ -68,6 +82,20 @@
             full_short_url, gid, hour
     </select>
 
+    <select id="listHourStatsByGroup" resultType="com.ming.shortlink.project.dao.entity.LinkAccessStatsDO">
+        SELECT
+            hour,
+            SUM(pv) AS pv
+        FROM
+            t_link_access_stats
+        WHERE
+            gid = #{gid}
+          AND date BETWEEN #{startDate}
+          and #{endDate}
+        GROUP BY
+            gid, hour
+    </select>
+
     <select id="listWeekdayStatsByShortLink" resultType="com.ming.shortlink.project.dao.entity.LinkAccessStatsDO">
         SELECT weekday,
                SUM(pv) AS pv
@@ -79,4 +107,16 @@
         GROUP BY
             full_short_url, gid, weekday
     </select>
+
+    <select id="listWeekdayStatsByGroup" resultType="com.ming.shortlink.project.dao.entity.LinkAccessStatsDO">
+        SELECT weekday,
+               SUM(pv) AS pv
+        FROM t_link_access_stats
+        WHERE gid = #{gid}
+          AND date BETWEEN #{startDate}
+          and #{endDate}
+        GROUP BY
+            gid, weekday
+    </select>
+
 </mapper>

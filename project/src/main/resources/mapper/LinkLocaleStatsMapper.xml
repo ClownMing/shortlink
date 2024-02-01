@@ -46,4 +46,16 @@
         GROUP BY
             full_short_url, gid, province;
     </select>
+
+    <select id="listLocaleByGroup" resultType="com.ming.shortlink.project.dao.entity.LinkLocaleStatsDO">
+        SELECT
+            province,
+            SUM(cnt) AS cnt
+        FROM t_link_locale_stats
+        WHERE
+          gid = #{gid}
+          AND date BETWEEN #{startDate} and #{endDate}
+        GROUP BY
+            gid, province;
+    </select>
 </mapper>

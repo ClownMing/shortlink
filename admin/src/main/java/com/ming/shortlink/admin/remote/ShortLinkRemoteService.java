@@ -124,6 +124,16 @@ public interface ShortLinkRemoteService {
         });
     }
 
+    default Result<ShortLinkStatsRespDTO> groupShortLinkStats(String gid, String startDate, String endDate) {
+        HashMap<String, Object> requestMap = new HashMap<>();
+        requestMap.put("gid", gid);
+        requestMap.put("startDate", startDate);
+        requestMap.put("endDate", endDate);
+        String result = HttpUtil.get("http://127.0.0.1:8001/api/short-link/v1/stats/group", requestMap);
+        return JSON.parseObject(result, new TypeReference<>() {
+        });
+    }
+
     /**
      * 访问单个短链接指定时间内访问记录监控数据
      */

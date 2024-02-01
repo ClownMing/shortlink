@@ -2,6 +2,7 @@ package com.ming.shortlink.project.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.ming.shortlink.project.dto.req.ShortLinkGroupStatsAccessRecordReqDTO;
+import com.ming.shortlink.project.dto.req.ShortLinkGroupStatsReqDTO;
 import com.ming.shortlink.project.dto.req.ShortLinkStatsAccessRecordReqDTO;
 import com.ming.shortlink.project.dto.req.ShortLinkStatsReqDTO;
 import com.ming.shortlink.project.dto.resp.ShortLinkStatsAccessRecordRespDTO;
@@ -17,6 +18,11 @@ public interface ShortLinkStatsService {
      * 获取单个短链接监控数据
      */
     ShortLinkStatsRespDTO oneShortLinkStats(ShortLinkStatsReqDTO requestParam);
+
+    /**
+     * 访问分组短链接指定时间内监控数据
+     */
+    ShortLinkStatsRespDTO groupShortLinkStats(ShortLinkGroupStatsReqDTO requestParam);
 
     /**
      * 访问单个短链接指定时间内访问记录监控数据

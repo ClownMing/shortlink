@@ -47,7 +47,7 @@ public interface ShortLinkService extends IService<ShortLinkDO> {
     /**
      * 修改短链接
      */
-    Void updateShortLink(ShortLinkUpdateReqDTO requestParam);
+    void updateShortLink(ShortLinkUpdateReqDTO requestParam);
 
     /**
      * 短链接跳转

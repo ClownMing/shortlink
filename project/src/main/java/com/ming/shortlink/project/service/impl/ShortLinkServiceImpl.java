@@ -192,7 +192,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public Void updateShortLink(ShortLinkUpdateReqDTO requestParam) {
+    public void updateShortLink(ShortLinkUpdateReqDTO requestParam) {
         LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
                 .eq(ShortLinkDO::getGid, requestParam.getOriginGid())
                 .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
@@ -227,7 +227,6 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
                     .eq(ShortLinkDO::getDelFlag, 0)
                     .eq(ShortLinkDO::getEnableStatus, 0);
-            baseMapper.delete(deleteWrapper);
             ShortLinkDO shortLinkDO = ShortLinkDO.builder()
                     .domain(dbShortLinkDO.getDomain())
                     .shortUri(dbShortLinkDO.getShortUri())
@@ -239,9 +238,21 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .validDateType(requestParam.getValidDateType())
                     .validDate(requestParam.getValidDate())
                     .build();
+            baseMapper.delete(deleteWrapper);
             baseMapper.insert(shortLinkDO);
         }
-        return null;
+        if(!Objects.equals(dbShortLinkDO.getValidDateType(), requestParam.getValidDateType())
+                || !Objects.equals(dbShortLinkDO.getValidDate(), requestParam.getValidDate())) {
+            stringRedisTemplate.delete(String.format(GOTO_SHORT_LINK_KEY, requestParam.getFullShortUrl()));
+            Date date = new Date();
+            if(dbShortLinkDO.getValidDate() != null && dbShortLinkDO.getValidDate().before(date)) {
+                if(Objects.equals(requestParam.getValidDateType(), ValidDateTypeEnum.PERMANENT.getType())
+                        || requestParam.getValidDate().after(date)) {
+                    stringRedisTemplate.delete(String.format(GOTO_IS_NULL_SHORT_LINK_KEY, requestParam.getFullShortUrl()));
+
+                }
+            }
+        }
     }
 
     @Override

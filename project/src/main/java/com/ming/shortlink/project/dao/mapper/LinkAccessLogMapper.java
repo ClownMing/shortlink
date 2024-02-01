@@ -41,4 +41,9 @@ public interface LinkAccessLogMapper extends BaseMapper<LinkAccessLogDO> {
      * 根据短链接获取指定日期内PV、UV、UIP数据
      */
     LinkAccessStatsDO findPvUvUipStatsByShortLink(ShortLinkStatsReqDTO shortLinkStatsReqDO);
+
+    /**
+     * 获取分组用户信息是否新老访客
+     */
+    List<HashMap<String, Object>> selectGroupUvTypeByUsers(@Param("gid") String gid, @Param("startDate") String startDate, @Param("endDate") String endDate, @Param("userAccessLogsList") List<String> userAccessLogsList);
 }

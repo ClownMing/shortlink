@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.ming.shortlink.project.dao.entity.*;
 import com.ming.shortlink.project.dao.mapper.*;
+import com.ming.shortlink.project.dto.req.ShortLinkGroupStatsAccessRecordReqDTO;
 import com.ming.shortlink.project.dto.req.ShortLinkStatsAccessRecordReqDTO;
 import com.ming.shortlink.project.dto.req.ShortLinkStatsReqDTO;
 import com.ming.shortlink.project.dto.resp.*;
@@ -256,6 +257,30 @@ public class ShortLinkStatsServiceImpl implements ShortLinkStatsService {
         actualResult.getRecords().forEach(each -> {
             String uvType = uvTYpeList.stream()
                     .filter(item -> Objects.equals(each.getUser(), item.get("user")))
+                    .findFirst()
+                    .map(item -> item.get("uvType"))
+                    .map(Object::toString)
+                    .orElse("旧访客");
+            each.setUvType(uvType);
+        });
+        return actualResult;
+    }
+
+    @Override
+    public IPage<ShortLinkStatsAccessRecordRespDTO> groupShortLinkStatsAccessRecord(ShortLinkGroupStatsAccessRecordReqDTO requestParam) {
+        LambdaQueryWrapper<LinkAccessLogDO> queryWrapper = Wrappers.lambdaQuery(LinkAccessLogDO.class)
+                .eq(LinkAccessLogDO::getGid, requestParam.getGid())
+                .between(LinkAccessLogDO::getCreateTime, requestParam.getStartDate(), requestParam.getEndDate())
+                .eq(LinkAccessLogDO::getDelFlag, 0)
+                .orderByDesc(LinkAccessLogDO::getCreateTime);
+        ShortLinkGroupStatsAccessRecordReqDTO linkAccessLogsDOIPage = linkAccessLogMapper.selectPage(requestParam, queryWrapper);
+        IPage<ShortLinkStatsAccessRecordRespDTO> actualResult = linkAccessLogsDOIPage.convert(each -> BeanUtil.toBean(each, ShortLinkStatsAccessRecordRespDTO.class));
+        List<String> userAccessLogsList = actualResult.getRecords().stream()
+                .map(ShortLinkStatsAccessRecordRespDTO::getUser)
+                .toList();
+        List<HashMap<String, Object>> uvTypeList = linkAccessLogMapper.selectGroupUvTypeByUsers(requestParam.getGid(), requestParam.getStartDate(), requestParam.getEndDate(), userAccessLogsList);
+        actualResult.getRecords().forEach(each -> {
+            String uvType = uvTypeList.stream().filter(item -> Objects.equals(each.getUser(), item.get("user")))
                     .findFirst()
                     .map(item -> item.get("uvType"))
                     .map(Object::toString)

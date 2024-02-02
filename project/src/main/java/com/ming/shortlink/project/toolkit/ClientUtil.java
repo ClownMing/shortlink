@@ -69,24 +69,34 @@ public class ClientUtil {
         return LOCALHOST_IPV6.equals(ip) ? LOCALHOST_IP : ip;
     }
 
+    /**
+     * 获取操作系统
+     */
     public static String getClientOS(HttpServletRequest request) {
         UserAgent userAgent = UserAgent.parseUserAgentString(request.getHeader("User-Agent"));
         return userAgent.getOperatingSystem().getName();
     }
 
-
+    /**
+     * 获取浏览器
+     */
     public static String getBrowser(HttpServletRequest request) {
         UserAgent userAgent = UserAgent.parseUserAgentString(request.getHeader("User-Agent"));
         return userAgent.getBrowser().toString();
     }
 
+    /**
+     * 获取设备类型
+     */
     public static String getDeviceType(HttpServletRequest request) {
         UserAgent userAgent = UserAgent.parseUserAgentString(request.getHeader("User-Agent"));
         DeviceType deviceType = userAgent.getOperatingSystem().getDeviceType();
         return deviceType.toString();
     }
 
-
+    /**
+     * 获取网络类型
+     */
     public static String getNetworkInterfaces() {
         StringBuilder networkInterfacesInfo = new StringBuilder();
         try {

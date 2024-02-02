@@ -2,13 +2,10 @@ package com.ming.shortlink.project.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.http.HttpUtil;
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -27,7 +24,7 @@ import com.ming.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.ming.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import com.ming.shortlink.project.dto.req.ShortLinkUpdateReqDTO;
 import com.ming.shortlink.project.dto.resp.*;
-import com.ming.shortlink.project.mq.producer.DelayShortLinkStatsProducer;
+import com.ming.shortlink.project.mq.producer.ShortLinkStatsSaveProducer;
 import com.ming.shortlink.project.service.LinkStatsTodayService;
 import com.ming.shortlink.project.service.ShortLinkService;
 import com.ming.shortlink.project.toolkit.ClientUtil;
@@ -60,7 +57,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.ming.shortlink.project.common.constant.RedisKeyConstant.*;
-import static com.ming.shortlink.project.common.constant.ShortLinkConstant.AMAP_REMOTE_URL;
 
 /**
  * @author clownMing
@@ -100,12 +96,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     private final LinkStatsTodayService linkStatsTodayService;
 
-    private final DelayShortLinkStatsProducer delayShortLinkStatsProducer;
-
     private final GotoDomainWhiteListConfiguration gotoDomainWhiteListConfiguration;
 
-    @Value("${short-link.stats.locale.amap-key}")
-    private String statsLocaleAMapKey;
+    private final ShortLinkStatsSaveProducer shortLinkStatsSaveProducer;
 
     @Value("${short-link.domain.default}")
     private String createShortLinkDefaultDomain;
@@ -469,135 +462,11 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     @Override
     public void shortLinkStats(String fullShortUrl, String gid, ShortLinkStatsRecordDTO statsRecord) {
-        fullShortUrl = Optional.ofNullable(fullShortUrl).orElse(statsRecord.getFullShortUrl());
-        RReadWriteLock readWriteLock = redissonClient.getReadWriteLock(String.format(LOCK_GID_UPDATE_KEY, fullShortUrl));
-        RLock rLock = readWriteLock.readLock();
-        if(!rLock.tryLock()) {
-            delayShortLinkStatsProducer.send(statsRecord);
-            return ;
-        }
-        try {
-            if(StrUtil.isBlank(gid)) {
-                LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
-                        .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
-                ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(queryWrapper);
-                gid = shortLinkGotoDO.getGid();
-            }
-            Date date = new Date();
-            int weekValue = DateUtil.dayOfWeekEnum(date).getIso8601Value();
-            int hour = DateUtil.hour(date, true);
-            LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
-                    .id(SnowUtil.getSnowflakeNextId())
-                    .pv(1)
-                    .uv(statsRecord.getUvFirstFlag() ? 1 : 0)
-                    .uip(statsRecord.getUipFirstFlag() ? 1 : 0)
-                    .hour(hour)
-                    .weekday(weekValue)
-                    .fullShortUrl(fullShortUrl)
-                    .gid(gid)
-                    .date(date)
-                    .build();
-            linkAccessStatsMapper.shortLinkStats(linkAccessStatsDO);
-            HashMap<String, Object> localeParamMap = new HashMap<>();
-            localeParamMap.put("key", statsLocaleAMapKey);
-            String ip = statsRecord.getRemoteAddr();
-            localeParamMap.put("ip", ip);
-            String mapResultStr = HttpUtil.get(AMAP_REMOTE_URL, localeParamMap);
-            JSONObject jsonObject = JSON.parseObject(mapResultStr);
-            String actualProvince;
-            String actualCity;
-            // 状态码
-            String infocode = jsonObject.getString("infocode");
-            LinkLocaleStatsDO linkLocaleStatsDO;
-            if (StrUtil.isNotBlank(infocode) && Objects.equals(infocode, "10000")) {
-                String province = jsonObject.getString("province");
-                boolean unknownFlag = StrUtil.isBlank(province);
-                linkLocaleStatsDO = LinkLocaleStatsDO.builder()
-                        .id(SnowUtil.getSnowflakeNextId())
-                        .province(actualProvince = unknownFlag ? "未知" : province)
-                        .city(actualCity = unknownFlag ? "未知" : jsonObject.getString("city"))
-                        .adcode(unknownFlag ? "未知" : jsonObject.getString("adcode"))
-                        .country("中国")
-                        .cnt(1)
-                        .fullShortUrl(fullShortUrl)
-                        .gid(gid)
-                        .date(date)
-                        .build();
-                linkLocaleStatsMapper.shortLinkLocalStats(linkLocaleStatsDO);
-                String os = statsRecord.getOs();
-                LinkOsStatsDO linkOsStatsDO = LinkOsStatsDO.builder()
-                        .id(SnowUtil.getSnowflakeNextId())
-                        .os(os)
-                        .cnt(1)
-                        .fullShortUrl(fullShortUrl)
-                        .gid(gid)
-                        .date(date)
-                        .build();
-                linkOsStatsMapper.shortLinkOsStats(linkOsStatsDO);
-                String browser = statsRecord.getBrowser();
-                LinkBrowserStatsDO linkBrowserStatsDO = LinkBrowserStatsDO.builder()
-                        .id(SnowUtil.getSnowflakeNextId())
-                        .browser(browser)
-                        .cnt(1)
-                        .fullShortUrl(fullShortUrl)
-                        .gid(gid)
-                        .date(date)
-                        .build();
-                linkBrowserStatsMapper.shortLinkBrowserStats(linkBrowserStatsDO);
-                String device = statsRecord.getDevice();
-                LinkAccessLogDO linkAccessLogDO = LinkAccessLogDO.builder()
-                        .id(SnowUtil.getSnowflakeNextId())
-                        .fullShortUrl(fullShortUrl)
-                        .gid(gid)
-                        .network(ClientUtil.getNetworkInterfaces())
-                        .device(device)
-                        .locale(StrUtil.join("-", "中国", actualProvince, actualCity))
-                        .user(statsRecord.getUv())
-                        .browser(browser)
-                        .os(os)
-                        .ip(ip)
-                        .build();
-                linkAccessLogMapper.insert(linkAccessLogDO);
-                LinkDeviceStatsDO linkDeviceStatsDO = LinkDeviceStatsDO.builder()
-                        .id(SnowUtil.getSnowflakeNextId())
-                        .device(device)
-                        .cnt(1)
-                        .fullShortUrl(fullShortUrl)
-                        .gid(gid)
-                        .date(date)
-                        .build();
-                linkDeviceStatsMapper.shortLinkDeviceStats(linkDeviceStatsDO);
-
-                String network = statsRecord.getNetwork();
-                LinkNetworkStatsDO linkNetworkStatsDO = LinkNetworkStatsDO.builder()
-                        .id(SnowUtil.getSnowflakeNextId())
-                        .network(network)
-                        .cnt(1)
-                        .fullShortUrl(fullShortUrl)
-                        .gid(gid)
-                        .date(date)
-                        .build();
-                linkNetworkStatsMapper.shortLinkNetwork(linkNetworkStatsDO);
-                baseMapper.incrementStats(gid, fullShortUrl, 1, statsRecord.getUvFirstFlag() ? 1 : 0, statsRecord.getUipFirstFlag() ? 1 : 0);
-                AtomicBoolean uvTodayFirstFlag = new AtomicBoolean();
-                Long uvTodayAdd = stringRedisTemplate.opsForSet().add("short-link:stats:uv:" + DateUtil.formatDate(date) + ":" + fullShortUrl, statsRecord.getUv());
-                uvTodayFirstFlag.set(uvTodayAdd != null && uvTodayAdd > 0L);
-                Long uipTodayAdd = stringRedisTemplate.opsForSet().add("short-link:stats:ip:" + DateUtil.formatDate(date) + ":" + fullShortUrl, ip);
-                boolean uipTodayFirstFlag = uipTodayAdd != null && uipTodayAdd > 0L;
-                LinkStatsTodayDO linkStatsTodayDO = LinkStatsTodayDO.builder()
-                        .id(SnowUtil.getSnowflakeNextId())
-                        .gid(gid)
-                        .fullShortUrl(fullShortUrl)
-                        .date(date)
-                        .todayPv(1)
-                        .todayUv(uvTodayFirstFlag.get() ? 1 : 0)
-                        .todayUip(uipTodayFirstFlag ? 1 : 0)
-                        .build();
-                linkStatsTodayMapper.shortLinkTodayStats(linkStatsTodayDO);
-            }
-        }catch (Throwable ex) {
-            LOG.error("短链接访问信息统计错误：{}", ex.getMessage());
-        }
+        Map<String, String> producerMap = new HashMap<>();
+        producerMap.put("fullShortUrl", fullShortUrl);
+        producerMap.put("gid", gid);
+        producerMap.put("statsRecord", JSON.toJSONString(statsRecord));
+        shortLinkStatsSaveProducer.send(producerMap);
     }
 
     private ShortLinkStatsRecordDTO buildLinkStatsRecordAndSetUser(String fullShortUrl, HttpServletRequest request, HttpServletResponse response) {

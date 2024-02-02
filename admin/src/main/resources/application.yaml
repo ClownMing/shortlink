@@ -18,3 +18,7 @@ spring:
 mybatis-plus:
   global-config:
     banner: off
+
+short-link:
+  group:
+    max-num: 20

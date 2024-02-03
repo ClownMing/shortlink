@@ -19,7 +19,7 @@ public class ShortLinkStatsSaveProducer {
     private final StringRedisTemplate stringRedisTemplate;
 
     /**
-     * 短链接监控状态保存消息队列生产者
+     * 发送延迟消费短链接统计
      */
     public void send(Map<String, String> produceMap) {
         stringRedisTemplate.opsForStream().add(SHORT_LINK_STATS_STREAM_TOPIC_KEY, produceMap);

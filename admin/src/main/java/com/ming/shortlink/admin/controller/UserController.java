@@ -59,7 +59,7 @@ public class UserController {
     /**
      * 用户登录
      */
-    @PostMapping("/api/short-link/v1/admin/user/login")
+    @PostMapping("/api/short-link/admin/v1/user/login")
     public Result<UserLoginRespDTO> login(@RequestBody UserLoginReqDTO requestParam) {
         UserLoginRespDTO result = userService.login(requestParam);
         return Results.success(result);
@@ -68,7 +68,7 @@ public class UserController {
     /**
      * 验证用户是否登录
      */
-    @GetMapping("/api/short-link/v1/user/admin/check-login")
+    @GetMapping("/api/short-link/admin/v1/user/check-login")
     public Result<Boolean> checkLogin(@RequestParam("username") String username, @RequestParam("token") String token) {
         Boolean result = userService.checkLogin(username, token);
         return Results.success(result);
@@ -76,7 +76,7 @@ public class UserController {
     /**
      * 用户退出登录
      */
-    @DeleteMapping("/api/short-link/v1/admin/user/logout")
+    @DeleteMapping("/api/short-link/admin/v1/user/logout")
     public Result<Void> logout(@RequestParam("username") String username, @RequestParam("token") String token) {
         userService.logout(username, token);
         return Results.success();

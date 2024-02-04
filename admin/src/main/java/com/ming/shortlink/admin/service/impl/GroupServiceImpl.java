@@ -14,7 +14,7 @@ import com.ming.shortlink.admin.dao.mapper.GroupMapper;
 import com.ming.shortlink.admin.dto.req.ShortLinkGroupSortReqDTO;
 import com.ming.shortlink.admin.dto.req.ShortLinkGroupUpdateReqDTO;
 import com.ming.shortlink.admin.dto.resp.ShortLinkGroupRespDTO;
-import com.ming.shortlink.admin.remote.ShortLinkRemoteService;
+import com.ming.shortlink.admin.remote.ShortLinkActualRemoteService;
 import com.ming.shortlink.admin.remote.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.ming.shortlink.admin.service.GroupService;
 import com.ming.shortlink.admin.toolkit.RandomGenerator;
@@ -40,6 +40,7 @@ import static com.ming.shortlink.admin.common.constant.RedisCacheConstant.LOCK_G
 public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implements GroupService {
 
     private final RedissonClient redissonClient;
+    private final ShortLinkActualRemoteService shortLinkActualRemoteService;
 
     @Value("${short-link.group.max-num}")
     private Integer groupMaxNum;
@@ -85,9 +86,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
                 .eq(GroupDO::getUsername, UserContext.getUsername())
                 .orderByDesc(GroupDO::getSortOrder, GroupDO::getUpdateTime);
         List<GroupDO> groupDOList = baseMapper.selectList(lambdaQueryWrapper);
-        ShortLinkRemoteService shortLinkRemoteService = new ShortLinkRemoteService() {
-        };
-        Result<List<ShortLinkGroupCountQueryRespDTO>> listResult = shortLinkRemoteService.listGroupShortLinkCount(groupDOList.stream().map(GroupDO::getGid).toList());
+        Result<List<ShortLinkGroupCountQueryRespDTO>> listResult = shortLinkActualRemoteService.listGroupShortLinkCount(groupDOList.stream().map(GroupDO::getGid).toList());
         List<ShortLinkGroupRespDTO> shortLinkGroupRespDTOList = groupDOList.parallelStream().map(groupDO -> BeanUtil.copyProperties(groupDO, ShortLinkGroupRespDTO.class)).collect(Collectors.toList());
         shortLinkGroupRespDTOList.forEach(each -> {
             Optional<ShortLinkGroupCountQueryRespDTO> first = listResult.getData().stream()

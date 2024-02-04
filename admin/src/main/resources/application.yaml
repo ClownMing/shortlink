@@ -2,6 +2,8 @@ server:
   port: 8002
 
 spring:
+  application:
+    name: short-link-admin
   devtools:
     livereload:
       port: 35729
@@ -15,6 +17,10 @@ spring:
     redis:
       host: 192.168.29.130
       port: 6379
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
 mybatis-plus:
   global-config:
     banner: off

@@ -15,9 +15,9 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 public class UserConfiguration {
 
     @Bean
-    public FilterRegistrationBean<UserTransmitFilter> globalUserTransmitFilter(StringRedisTemplate stringRedisTemplate) {
+    public FilterRegistrationBean<UserTransmitFilter> globalUserTransmitFilter() {
         FilterRegistrationBean<UserTransmitFilter> registrationBean = new FilterRegistrationBean<>();
-        registrationBean.setFilter(new UserTransmitFilter(stringRedisTemplate));
+        registrationBean.setFilter(new UserTransmitFilter());
         registrationBean.addUrlPatterns("/*");
         registrationBean.setOrder(0);
         return registrationBean;

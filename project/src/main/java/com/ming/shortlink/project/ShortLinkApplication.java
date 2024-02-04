@@ -17,10 +17,6 @@ import org.springframework.core.env.Environment;
 public class ShortLinkApplication {
 
     private static final Logger LOG = LoggerFactory.getLogger(ShortLinkApplication.class);
-
-    /**
-     * 根据用户名查询用户信息
-     */
     public static void main(String[] args) {
         SpringApplication application = new SpringApplication(ShortLinkApplication.class);
         Environment env = application.run(args).getEnvironment();

@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * @author clownMing
  */
-@RestController
+@RestController(value = "shortLinkStatsControllerByAdmin")
 @RequiredArgsConstructor
 public class ShortLinkStatsController {
 

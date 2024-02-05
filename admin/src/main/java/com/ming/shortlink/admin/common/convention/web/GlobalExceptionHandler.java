@@ -22,7 +22,7 @@ import java.util.Optional;
 /**
  * @author clownMing
  */
-@Component
+@Component("globalExceptionHandlerByAdmin")
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 

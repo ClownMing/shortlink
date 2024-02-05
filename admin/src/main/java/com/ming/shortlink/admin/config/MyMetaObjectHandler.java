@@ -2,6 +2,7 @@ package com.ming.shortlink.admin.config;
 
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import org.apache.ibatis.reflection.MetaObject;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
@@ -9,7 +10,8 @@ import java.util.Date;
 /**
  * @author clownMing
  */
-@Component
+@Primary
+@Component(value = "myMetaObjectHandlerByAdmin")
 public class MyMetaObjectHandler implements MetaObjectHandler {
 
     @Override

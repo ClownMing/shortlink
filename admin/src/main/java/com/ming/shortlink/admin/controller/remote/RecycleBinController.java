@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @author clownMing}
  * 回收站管理控制层
  */
-@RestController
+@RestController(value = "recycleBinControllerByAdmin")
 @RequiredArgsConstructor
 public class RecycleBinController {
 

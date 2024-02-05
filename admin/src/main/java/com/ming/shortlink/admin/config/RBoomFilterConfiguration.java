@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 /**
  * @author clownMing
  */
-@Configuration
+@Configuration(value = "rBloomFilterConfigurationByAdmin")
 public class RBoomFilterConfiguration {
 
     /**

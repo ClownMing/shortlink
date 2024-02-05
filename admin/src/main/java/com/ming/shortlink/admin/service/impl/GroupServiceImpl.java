@@ -35,7 +35,7 @@ import static com.ming.shortlink.admin.common.constant.RedisCacheConstant.LOCK_G
  * @author clownMing
  * 短链接分组接口实现层
  */
-@Service
+@Service(value = "recycleBinServiceImplByAdmin")
 @RequiredArgsConstructor
 public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implements GroupService {
 

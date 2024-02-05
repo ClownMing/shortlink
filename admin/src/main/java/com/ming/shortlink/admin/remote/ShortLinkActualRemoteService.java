@@ -16,7 +16,7 @@ import java.util.List;
  * @author clownMing
  * 短链接中台远程调用服务
  */
-@FeignClient(value = "short-link-project", url = "${aggregation.remote-url}")
+@FeignClient(value = "short-link-project", url = "${aggregation.remote-url:}")
 public interface ShortLinkActualRemoteService {
 
     /**

@@ -3,7 +3,7 @@ spring:
     gateway:
       routes:
         - id: short-link-admin-aggregation
-          uri: lb://short-link-admin-aggregation
+          uri: lb://short-link-aggregation
           predicates:
             - Path=/api/short-link/admin/**
           filters:
@@ -13,7 +13,7 @@ spring:
                   - /api/short-link/admin/v1/user/login
                   - /api/short-link/admin/v1/user/has-username
         - id: short-link-project-aggregation
-          uri: lb://short-link-project-aggregation
+          uri: lb://short-link-aggregation
           predicates:
             - Path=/api/short-link/**
           filters:

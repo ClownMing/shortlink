@@ -1,6 +1,7 @@
 package com.ming.shortlink.project.mq.consumer;
 
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson2.JSON;
@@ -11,28 +12,37 @@ import com.ming.shortlink.project.common.convention.exception.ServiceException;
 import com.ming.shortlink.project.dao.entity.*;
 import com.ming.shortlink.project.dao.mapper.*;
 import com.ming.shortlink.project.dto.biz.ShortLinkStatsRecordDTO;
+import com.ming.shortlink.project.mq.dto.MQDTO;
 import com.ming.shortlink.project.mq.idempotent.MessageQueueIdempotentHandler;
-import com.ming.shortlink.project.mq.producer.DelayShortLinkStatsProducer;
+import com.ming.shortlink.project.mq.producer.DelayShortLinkStatsMQProducer;
 import com.ming.shortlink.project.toolkit.ClientUtil;
 import com.ming.shortlink.project.toolkit.SnowUtil;
+import com.rabbitmq.client.Channel;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import org.redisson.api.RLock;
 import org.redisson.api.RReadWriteLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.connection.stream.MapRecord;
-import org.springframework.data.redis.connection.stream.RecordId;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.stream.StreamListener;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.io.IOException;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.ming.shortlink.project.common.constant.RedisKeyConstant.LOCK_GID_UPDATE_KEY;
 import static com.ming.shortlink.project.common.constant.ShortLinkConstant.AMAP_REMOTE_URL;
+import static com.ming.shortlink.project.config.ShortLinkStatsMQConfig.MQ_SHORT_LINK_STATS_QUEUE;
 
 /**
  * @author clownMing
@@ -40,9 +50,9 @@ import static com.ming.shortlink.project.common.constant.ShortLinkConstant.AMAP_
  */
 @Component
 @RequiredArgsConstructor
-public class ShortLinkStatsSaveConsumer implements StreamListener<String, MapRecord<String, String, String>> {
+public class ShortLinkStatsSaveMQConsumer{
 
-    private static final Logger LOG = LoggerFactory.getLogger(ShortLinkStatsSaveConsumer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ShortLinkStatsSaveMQConsumer.class);
     private final ShortLinkMapper shortLinkMapper;
     private final ShortLinkGotoMapper shortLinkGotoMapper;
     private final StringRedisTemplate stringRedisTemplate;
@@ -55,40 +65,56 @@ public class ShortLinkStatsSaveConsumer implements StreamListener<String, MapRec
     private final LinkDeviceStatsMapper linkDeviceStatsMapper;
     private final LinkNetworkStatsMapper linkNetworkStatsMapper;
     private final LinkStatsTodayMapper linkStatsTodayMapper;
-    private final DelayShortLinkStatsProducer delayShortLinkStatsProducer;
     private final MessageQueueIdempotentHandler messageQueueIdempotentHandler;
+    private final DelayShortLinkStatsMQProducer delayShortLinkStatsMQProducer;
 
     @Value("${short-link.stats.locale.amap-key}")
     private String statsLocaleAMapKey;
 
-
-    @Override
-    public void onMessage(MapRecord<String, String, String> message) {
-        String stream = message.getStream();
-        RecordId id = message.getId();
-        if (!messageQueueIdempotentHandler.isMessageProcessed(id.toString())) {
+    @SneakyThrows
+    @RabbitListener(queues = MQ_SHORT_LINK_STATS_QUEUE, ackMode = "MANUAL")
+    public void receive(Message message,
+                        Channel channel,
+                        @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) {
+        MQDTO mqdto = JSON.parseObject(message.getBody(), MQDTO.class);
+        if(ObjectUtil.isNull(mqdto)) {
+            // 手动进行nack
+            try {
+                channel.basicNack(deliveryTag, false, false);
+                throw new ServiceException("消息为空");
+            } catch (IOException e) {
+                LOG.error("消息消费者进行nack失败");
+            }
+        }
+        String messageId = message.getMessageProperties().getMessageId();
+        if (!messageQueueIdempotentHandler.isMessageProcessed(messageId)) {
             // 判断当前的这个消息流程是否执行完成
-            if (messageQueueIdempotentHandler.isAccomplish(id.toString())) {
+            if (messageQueueIdempotentHandler.isAccomplish(messageId)) {
+                try {
+                    channel.basicAck(deliveryTag, false);
+                } catch (IOException e) {
+                    LOG.error("消息消费者进行nack失败");
+                }
                 return;
             }
             throw new ServiceException("消息未完成流程，需要消息队列重试");
         }
         try {
-            Map<String, String> producerMap = message.getValue();
-            String fullShortUrl = producerMap.get("fullShortUrl");
+            String fullShortUrl = mqdto.getFullShortUrl();
             if (StrUtil.isNotBlank(fullShortUrl)) {
-                String gid = producerMap.get("gid");
-                ShortLinkStatsRecordDTO statsRecord = JSON.parseObject(producerMap.get("statsRecord"), ShortLinkStatsRecordDTO.class);
+                String gid = mqdto.getGid();
+                ShortLinkStatsRecordDTO statsRecord = mqdto.getShortLinkStatsRecordDTO();
                 actualSaveShortLinkStats(fullShortUrl, gid, statsRecord);
             }
-            stringRedisTemplate.opsForStream().delete(Objects.requireNonNull(stream), id.getValue());
         } catch (Throwable ex) {
             // 某某某情况宕机了
-            messageQueueIdempotentHandler.delMessageProcessed(id.toString());
+            messageQueueIdempotentHandler.delMessageProcessed(messageId);
             LOG.error("记录短链接监控消费异常", ex);
             throw new ServiceException("消息未完成流程，需要消息队列重试");
         }
-        messageQueueIdempotentHandler.setAccomplish(id.toString());
+        messageQueueIdempotentHandler.setAccomplish(messageId);
+        channel.basicAck(deliveryTag, false);
+        LOG.info("ShortLinkStatsSaveMQConsumer receive message success!!");
     }
 
     public void actualSaveShortLinkStats(String fullShortUrl, String gid, ShortLinkStatsRecordDTO statsRecord) {
@@ -96,7 +122,7 @@ public class ShortLinkStatsSaveConsumer implements StreamListener<String, MapRec
         RReadWriteLock readWriteLock = redissonClient.getReadWriteLock(String.format(LOCK_GID_UPDATE_KEY, fullShortUrl));
         RLock rLock = readWriteLock.readLock();
         if (!rLock.tryLock()) {
-            delayShortLinkStatsProducer.send(statsRecord);
+            delayShortLinkStatsMQProducer.send(statsRecord);
             return;
         }
         try {

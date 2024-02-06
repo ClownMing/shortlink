@@ -24,10 +24,15 @@ spring:
     nacos:
       discovery:
         server-addr: 127.0.0.1:8848
+  rabbitmq:
+    host: 192.168.29.130
+    username: dym
+    password: 775821
+    port: 5672
 mybatis-plus:
   global-config:
     banner: off
-
+  mapper-locations: classpath:mapper/*.xml
 short-link:
   domain:
     default: nurl.ink:${server.port}

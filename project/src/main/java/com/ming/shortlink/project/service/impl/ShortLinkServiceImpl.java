@@ -5,7 +5,6 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.StrUtil;
-import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -24,7 +23,7 @@ import com.ming.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.ming.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import com.ming.shortlink.project.dto.req.ShortLinkUpdateReqDTO;
 import com.ming.shortlink.project.dto.resp.*;
-import com.ming.shortlink.project.mq.producer.ShortLinkStatsSaveProducer;
+import com.ming.shortlink.project.mq.producer.ShortLinkStatsSaveMQProducer;
 import com.ming.shortlink.project.service.LinkStatsTodayService;
 import com.ming.shortlink.project.service.ShortLinkService;
 import com.ming.shortlink.project.toolkit.ClientUtil;
@@ -44,6 +43,7 @@ import org.redisson.api.RReadWriteLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -98,7 +98,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     private final GotoDomainWhiteListConfiguration gotoDomainWhiteListConfiguration;
 
-    private final ShortLinkStatsSaveProducer shortLinkStatsSaveProducer;
+    private final ShortLinkStatsSaveMQProducer shortLinkStatsSaveMQProducer;
+
+    private final RabbitTemplate rabbitTemplate;
 
     @Value("${short-link.domain.default}")
     private String createShortLinkDefaultDomain;
@@ -225,7 +227,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         } else {
             RReadWriteLock readWriteLock = redissonClient.getReadWriteLock(String.format(LOCK_GID_UPDATE_KEY, requestParam.getFullShortUrl()));
             RLock rLock = readWriteLock.writeLock();
-            if(!rLock.tryLock()) {
+            if (!rLock.tryLock()) {
                 throw new ServiceException("短链接正在被访问，请稍后再试");
             }
             try {
@@ -335,16 +337,16 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .gid(requestParam.getGid())
                         .build();
                 linkAccessLogMapper.update(linkAccessLogsDO, linkAccessLogsUpdateWrapper);
-            }finally {
+            } finally {
                 rLock.unlock();
             }
         }
-        if(!Objects.equals(dbShortLinkDO.getValidDateType(), requestParam.getValidDateType())
+        if (!Objects.equals(dbShortLinkDO.getValidDateType(), requestParam.getValidDateType())
                 || !Objects.equals(dbShortLinkDO.getValidDate(), requestParam.getValidDate())) {
             stringRedisTemplate.delete(String.format(GOTO_SHORT_LINK_KEY, requestParam.getFullShortUrl()));
             Date date = new Date();
-            if(dbShortLinkDO.getValidDate() != null && dbShortLinkDO.getValidDate().before(date)) {
-                if(Objects.equals(requestParam.getValidDateType(), ValidDateTypeEnum.PERMANENT.getType())
+            if (dbShortLinkDO.getValidDate() != null && dbShortLinkDO.getValidDate().before(date)) {
+                if (Objects.equals(requestParam.getValidDateType(), ValidDateTypeEnum.PERMANENT.getType())
                         || requestParam.getValidDate().after(date)) {
                     stringRedisTemplate.delete(String.format(GOTO_IS_NULL_SHORT_LINK_KEY, requestParam.getFullShortUrl()));
 
@@ -396,7 +398,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         RLock lock = redissonClient.getLock(String.format(LOCK_GOTO_SHORT_LINK_KEY, fullShortUrl));
         lock.lock();
         try {
-            // dcl 双重检查锁
+            // dcl 双重检查锁 防止解锁后，重复操作数据库造成资源浪费
             originalLink = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_LINK_KEY, fullShortUrl));
             if (StrUtil.isNotBlank(originalLink)) {
                 try {
@@ -456,11 +458,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     @Override
     public void shortLinkStats(String fullShortUrl, String gid, ShortLinkStatsRecordDTO statsRecord) {
-        Map<String, String> producerMap = new HashMap<>();
-        producerMap.put("fullShortUrl", fullShortUrl);
-        producerMap.put("gid", gid);
-        producerMap.put("statsRecord", JSON.toJSONString(statsRecord));
-        shortLinkStatsSaveProducer.send(producerMap);
+        shortLinkStatsSaveMQProducer.send(fullShortUrl, gid, statsRecord);
     }
 
     private ShortLinkStatsRecordDTO buildLinkStatsRecordAndSetUser(String fullShortUrl, HttpServletRequest request, HttpServletResponse response) {
@@ -549,15 +547,15 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     private void verificationWhitelist(String originUrl) {
         Boolean enable = gotoDomainWhiteListConfiguration.getEnable();
-        if(enable == null || !enable) {
-            return ;
+        if (enable == null || !enable) {
+            return;
         }
         String domain = LinkUtil.extractDomain(originUrl);
-        if(StrUtil.isBlank(domain)) {
+        if (StrUtil.isBlank(domain)) {
             throw new ClientException("跳转链接填写错误");
         }
         List<String> details = gotoDomainWhiteListConfiguration.getDetails();
-        if(!details.contains(domain)) {
+        if (!details.contains(domain)) {
             throw new ClientException("演示环境为避免恶意攻击，请生成一下网站跳转链接: " + gotoDomainWhiteListConfiguration.getNames());
         }
     }

@@ -1,6 +1,5 @@
 package com.ming.shortlink.project;
 
-import org.mybatis.spring.annotation.MapperScan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -12,7 +11,6 @@ import org.springframework.core.env.Environment;
  * @author clownMing
  */
 @SpringBootApplication
-@MapperScan("com.ming.shortlink.project.dao.mapper")
 @EnableDiscoveryClient
 public class ShortLinkApplication {
 

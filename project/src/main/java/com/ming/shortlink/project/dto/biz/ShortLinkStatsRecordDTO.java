@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ShortLinkStatsRecordDTO {
+public class ShortLinkStatsRecordDTO{
 
     /**
      * 完整短链接

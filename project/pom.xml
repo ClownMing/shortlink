@@ -26,6 +26,12 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- amqp -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
         <!-- 引入持久层框架 -->
         <dependency>
             <groupId>com.baomidou</groupId>
